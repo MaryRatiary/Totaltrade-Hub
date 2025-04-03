@@ -1,0 +1,95 @@
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  background: -o-repeating-linear-gradient(45deg, #080c10, #040506, #0c0909, #353636, #000000, #3c3d3e, #000000);
+  background-size: 400% 400%;
+  animation: neonBackground 10s ease infinite;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+  flex-wrap: nowrap; /* Ensure the navbar doesn't wrap */
+  height: 80px;
+}
+
+@keyframes neonBackground {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.navbar-brand {
+  display: flex;
+  align-items: center;
+  font-size: 19px;
+  font-weight: bold;
+  color: #ffffff;
+}
+
+.navbar-links,
+.navbar-links-right {
+  display: flex;
+  list-style: none;
+  color: #ffffff;
+}
+
+.navbar-links li,
+.navbar-links-right li {
+  margin-left: 1rem;
+  font-size: 26px;
+  font-family: 'Roboto', sans-serif;
+}
+
+.navbar-links a,
+.navbar-links-right a {
+  text-decoration: none;
+  color: #ffffff;
+  font-weight: 500;
+  border-radius: 4px;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+.navbar-links a:hover
+ {
+
+  color: #f69c02;
+
+} .navbar-links-right a:hover{
+   
+    color: #f69c02;
+
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .navbar {
+    padding: 0.5rem 1rem; /* Reduce padding */
+  }
+
+  .navbar-brand {
+    font-size: 15px; /* Reduce font size */
+  }
+
+  .navbar-links li,
+  .navbar-links-right li {
+  
+    font-size: 16px; /* Reduce font size */
+
+  }
+
+  .navbar-links a,
+  .navbar-links-right a {
+    padding: 0.25rem 0.5rem; /* Reduce padding */
+  }
+}
+.navbar-logo{
+  width: 120px;
+  height: 120px;
+  margin-right: 10px;
+}

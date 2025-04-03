@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+/frontend/node_modules
+/backend/obj
+/backend/bin
+/backend/wwwroot/uploads
+
+# Environment files
+.env
+.env.local
+appsettings.Development.json
+
+# Build files
+/frontend/dist
+/frontend/build
+/backend/*.db
+
+# IDE files
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# Misc
+.DS_Store
+Thumbs.db

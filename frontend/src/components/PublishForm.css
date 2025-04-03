@@ -1,0 +1,59 @@
+.publish-section {
+  margin: 2rem;
+  padding: 1rem;
+  
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.publish-form {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  gap: 1rem;
+  align-items: center;
+}
+
+.publish-input {
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  width: 100%;
+  box-sizing: border-box; /* Ensure consistent sizing */
+  height: 40px; /* Set a consistent height for all input fields */
+}
+
+textarea.publish-input {
+  height: 80px; /* Slightly taller for textareas */
+  resize: none; /* Disable resizing for consistent layout */
+}
+
+.publish-button {
+  grid-column: span 3; /* Button spans all columns */
+  background-color: #007bff;
+  color: rgb(50, 104, 184);
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.publish-button:hover {
+  background-color: #0056b3;
+}
+
+.dropdown-toggle {
+  background-color: #0575edbd;
+  color: rgb(255, 255, 255);
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-bottom: 1rem;
+  justify-content: right!important;
+}
+
+.dropdown-toggle:hover {
+  background-color: #1e69ff;
+}
