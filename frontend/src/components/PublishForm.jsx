@@ -26,26 +26,23 @@ const PublishForm = ({ onPublish }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
+
     try {
       const formData = new FormData();
 
-      // Log the data being sent
-      console.log('Données à envoyer:', newArticle);
-      
       formData.append('title', newArticle.title);
       formData.append('content', newArticle.content);
       formData.append('price', newArticle.price);
       formData.append('location', newArticle.location);
       formData.append('description', newArticle.description);
       formData.append('contact', newArticle.contact);
-      
+
       if (newArticle.image) {
         formData.append('image', newArticle.image);
       }
 
       const success = await onPublish(formData);
-      
+
       if (success) {
         setNewArticle({
           title: '',
@@ -54,9 +51,9 @@ const PublishForm = ({ onPublish }) => {
           price: '',
           location: '',
           description: '',
-          contact: ''
+          contact: '',
         });
-        setIsDropdownOpen(false);
+        setIsDropdownOpen(false); // Close the dropdown
         alert('Article publié avec succès!');
       }
     } catch (error) {
@@ -68,13 +65,13 @@ const PublishForm = ({ onPublish }) => {
   };
 
   const toggleDropdown = () => {
-    setIsDropdownOpen(!isDropdownOpen);
+    setIsDropdownOpen(!isDropdownOpen); // Toggle the dropdown state
   };
 
   return (
-    <section className="publish-section">
+    <section className="publish-section ">
       <button onClick={toggleDropdown} className="dropdown-toggle !justify-end">
-        {isDropdownOpen ? 'abondonner' : 'Publier'} un article
+        {isDropdownOpen ? 'Abandonner' : 'Publier un article'}
       </button>
       {isDropdownOpen && (
         <form onSubmit={handleSubmit} className="publish-form">
@@ -136,13 +133,15 @@ const PublishForm = ({ onPublish }) => {
             onChange={handleImageChange}
             className="publish-input"
           />
-          <button 
-            type="submit" 
-            className="publish-button"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? 'Publication...' : 'Publier'}
-          </button>
+          <div className="!justify-end">
+            <button
+              type="submit"
+              className="publish-button"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Publication...' : 'Publier'}
+            </button>
+          </div>
         </form>
       )}
     </section>

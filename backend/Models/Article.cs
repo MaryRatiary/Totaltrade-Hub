@@ -1,24 +1,56 @@
 using System.ComponentModel.DataAnnotations;
 using TTH.Backend.Models; // Ensure this namespace matches the namespace in User.cs
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
 
-public class Article
+namespace TTH.Backend.Models
 {
-    public int Id { get; set; }
-    [Required]
-    public string Title { get; set; } = string.Empty;
-    [Required]
-    public string Content { get; set; } = string.Empty;
-    [Required]
-    public decimal Price { get; set; }
-    [Required]
-    public string Location { get; set; } = string.Empty;
-    [Required]
-    public string Description { get; set; } = string.Empty;
-    [Required]
-    public string Contact { get; set; } = string.Empty;
-    public string ImagePath { get; set; } = string.Empty;
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public class Article
+    {
+        [BsonId]
+        [BsonRepresentation(BsonType.ObjectId)]
+        public string? Id { get; set; }
+        
+        [BsonRequired]
+        [BsonElement("title")]
+        public string Title { get; set; } = string.Empty;
 
-    public string UserId { get; set; } = string.Empty; // Ensure this matches the User.Id type
-    public virtual User? User { get; set; } // Reference the User class
+        [BsonElement("content")]
+        public string Content { get; set; } = string.Empty;
+
+        [BsonElement("price")]
+        public decimal Price { get; set; }
+
+        [BsonElement("location")]
+        public string Location { get; set; } = string.Empty;
+
+        [BsonElement("description")]
+        public string Description { get; set; } = string.Empty;
+
+        [BsonElement("contact")]
+        public string Contact { get; set; } = string.Empty;
+
+        [BsonElement("imagePath")]
+        public string ImagePath { get; set; } = string.Empty;
+
+        [BsonElement("userId")]
+        public string UserId { get; set; } = string.Empty;
+
+        [BsonElement("createdAt")]
+        public DateTime CreatedAt { get; set; }
+
+        [BsonIgnore]
+        public string AuthorFirstName { get; set; } = string.Empty;
+        [BsonIgnore]
+        public string AuthorLastName { get; set; } = string.Empty;
+        [BsonIgnore]
+        public string AuthorUsername { get; set; } = string.Empty;
+        [BsonIgnore]
+        public string? AuthorProfilePicture { get; set; }
+
+        [BsonIgnore]
+        public string FullImageUrl => !string.IsNullOrEmpty(ImagePath) 
+            ? $"http://localhost:5131{ImagePath}" 
+            : string.Empty;
+    }
 }

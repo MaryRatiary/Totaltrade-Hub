@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-
+import './Register.css' 
 const Register = () => {
   const navigate = useNavigate();
 
@@ -61,7 +61,7 @@ const Register = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
+    <div className=" baky flex items-center justify-center min-h-screen bg-#1f2937">
        <Link
         className="absolute top-4 right-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
         to="/"

@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom'; // Add this import
+import { useNavigate } from 'react-router-dom';
 
 import Sidebar from '../components/Sidebar';
-import ArticleList from '../components/ArticleList';
 import Navbar from '../components/Navbar';
 import PublishForm from '../components/PublishForm';
 import ArticleCard from '../components/ArticleCard';
+import UserList from '../components/UserList';
 
 const Actualite = () => {
-  const navigate = useNavigate(); // Add this line
-  
+  const navigate = useNavigate();
+  const [isPublishOpen, setIsPublishOpen] = useState(false);
+  const [articles, setArticles] = useState([]);
+  const [users, setUsers] = useState([]);
+
   useEffect(() => {
     const currentUser = localStorage.getItem('currentUser');
     if (!currentUser) {
@@ -17,38 +20,46 @@ const Actualite = () => {
     }
   }, [navigate]);
 
-  const [articles, setArticles] = useState([]);
-
   useEffect(() => {
     fetchArticles();
+    fetchUsers();
   }, []);
 
   const API_BASE_URL = 'http://localhost:5131/api';
 
   const fetchArticles = async () => {
     try {
-      const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-      if (!currentUser || !currentUser.token) {
-        navigate('/login');
-        return;
-      }
-
-      const response = await fetch(`${API_BASE_URL}/articles/user`, {
-        headers: {
-          'Authorization': `Bearer ${currentUser.token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
+      const response = await fetch(`${API_BASE_URL}/articles/all`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
       const data = await response.json();
-      console.log('Articles fetched from server:', data); // Debug log
       setArticles(data);
     } catch (error) {
       console.error('Error fetching articles:', error);
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+      const response = await fetch(`${API_BASE_URL}/users`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      setUsers(data);
+    } catch (error) {
+      console.error('Error fetching users:', error);
     }
   };
 
@@ -63,9 +74,9 @@ const Actualite = () => {
       const response = await fetch(`${API_BASE_URL}/articles`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${currentUser.token}`
+          'Authorization': `Bearer ${currentUser.token}`,
         },
-        body: formData
+        body: formData,
       });
 
       if (!response.ok) {
@@ -73,8 +84,6 @@ const Actualite = () => {
       }
 
       const result = await response.json();
-      console.log('Server response:', result); // Debug log
-
       if (result.article) {
         const newArticle = {
           id: result.article.id,
@@ -85,52 +94,15 @@ const Actualite = () => {
           location: result.article.location,
           contact: result.article.contact,
           imagePath: result.article.imagePath,
-          createdAt: result.article.createdAt
+          createdAt: result.article.createdAt,
         };
-        
-        setArticles(prevArticles => [newArticle, ...prevArticles]);
+        setArticles((prevArticles) => [newArticle, ...prevArticles]);
         return true;
       }
       return false;
     } catch (error) {
       console.error('Error publishing article:', error);
       return false;
-    }
-  };
-
-  const resetArticles = async () => {
-    if (!window.confirm('Êtes-vous sûr de vouloir supprimer toutes vos publications ?')) {
-        return;
-    }
-
-    try {
-        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-        if (!currentUser || !currentUser.token) {
-            navigate('/login');
-            return;
-        }
-
-        console.log('Sending reset request...'); // Debug log
-
-        const response = await fetch(`${API_BASE_URL}/articles/reset`, {
-            method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${currentUser.token}`,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        if (!response.ok) {
-            const errorData = await response.text();
-            console.error('Server error:', errorData); // Debug log
-            throw new Error('Failed to reset articles');
-        }
-
-        await fetchArticles(); // Refresh the articles list
-        alert('Publications réinitialisées avec succès');
-    } catch (error) {
-        console.error('Error:', error);
-        alert('Erreur lors de la réinitialisation des publications');
     }
   };
 
@@ -149,8 +121,8 @@ const Actualite = () => {
       const response = await fetch(`${API_BASE_URL}/articles/deleteAll`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${currentUser.token}`
-        }
+          'Authorization': `Bearer ${currentUser.token}`,
+        },
       });
 
       if (response.ok) {
@@ -165,43 +137,63 @@ const Actualite = () => {
     }
   };
 
+  const handleDeleteArticle = (id) => {
+    setArticles((prevArticles) => prevArticles.filter((article) => article.id !== id));
+  };
+
+  const handleEditArticle = (article) => {
+    // Open the PublishForm with the article data pre-filled for editing
+    alert(`Editing article: ${article.title}`); // Placeholder for edit functionality
+  };
+
   return (
-    <div className="welcome-container">
+    <div className={`actualite-container ${isPublishOpen ? 'blur-background' : ''}`}>
       <header>
         <Navbar />
       </header>
 
-      <PublishForm onPublish={handlePublish} />
-      
-      <div className="admin-controls">
-        <button 
-          onClick={deleteAllArticles}
-          className="delete-all-button bg-red-600 hover:bg-red-800 text-white font-bold py-2 px-4 rounded mb-4"
-        >
-          Supprimer toutes les publications
-        </button>
+      <div className="publish-section-container">
+        <PublishForm 
+          onPublish={handlePublish} 
+          setIsPublishOpen={setIsPublishOpen} 
+        />
       </div>
 
-      <Sidebar />
-      
-      <section className="articles">
-        <h2>Publications récentes</h2>
-        <div className="articles-grid">
-          {articles && articles.length > 0 ? (
-            articles.map((article, index) => (
-              <ArticleCard 
-                key={`${article.id || ''}-${index}`} 
-                article={article} 
-              />
-            ))
-          ) : (
-            <p className="no-articles">Aucun article publié pour le moment</p>
-          )}
+      <div className={`main-content ${isPublishOpen ? 'blur' : ''}`}>
+        <div className="admin-controls">
+          <button
+            onClick={deleteAllArticles}
+            className="delete-all-button bg-red-600 hover:bg-red-800 text-white font-bold py-2 px-4 rounded mb-4"
+          >
+            Supprimer toutes les publications
+          </button>
         </div>
-      </section>
+
+        <Sidebar />
+        <UserList users={users} />
+        <section className="articles">
+          <h2>Publications récentes</h2>
+          <div className="articles-grid">
+            {articles.length > 0 ? (
+              articles.map((article) => (
+                <ArticleCard 
+                  key={article.id} 
+                  article={article} 
+                  onDelete={handleDeleteArticle} 
+                  onEdit={handleEditArticle} 
+                />
+              ))
+            ) : (
+              <p className="no-articles">Aucun article publié pour le moment</p>
+            )}
+          </div>
+        </section>
+      </div>
     </div>
   );
 };
 
 export default Actualite;
+
+
 

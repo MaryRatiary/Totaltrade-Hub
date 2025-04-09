@@ -1,1 +1,5 @@
 @import "tailwindcss";
+
+.Body{
+    margin-top: 80px;
+}

@@ -1,13 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using TTH.Backend.Data;
-using TTH.Backend.Models;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Cors;
 using System.Security.Claims;
-using System.ComponentModel.DataAnnotations;
-using Microsoft.Extensions.Logging;
-using System.Text.Json;
+using TTH.Backend.Services;
+using TTH.Backend.Models;
 
 namespace TTH.Backend.Controllers
 {
@@ -15,29 +10,123 @@ namespace TTH.Backend.Controllers
     [Route("api/[controller]")]
     public class ArticlesController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly ArticleService _articleService;
+        private readonly UserService _userService;
         private readonly IWebHostEnvironment _environment;
         private readonly ILogger<ArticlesController> _logger;
 
-        public ArticlesController(AppDbContext context, IWebHostEnvironment environment, ILogger<ArticlesController> logger)
+        public ArticlesController(
+            ArticleService articleService,
+            UserService userService,
+            IWebHostEnvironment environment,
+            ILogger<ArticlesController> logger)
         {
-            _context = context;
+            _articleService = articleService;
+            _userService = userService;
             _environment = environment;
             _logger = logger;
+        }
+
+        [HttpGet("all")]
+        public async Task<IActionResult> GetAllArticles()
+        {
+            try
+            {
+                _logger.LogInformation("Starting GetAllArticles request");
+                var articles = await _articleService.GetAllAsync();
+                _logger.LogInformation($"Retrieved {articles.Count} articles from service");
+
+                var response = articles.Select(a => {
+                    _logger.LogInformation($"Processing article ID: {a.Id}");
+                    _logger.LogInformation($"Article data: Title={a.Title}, Author={a.AuthorFirstName} {a.AuthorLastName}");
+                    return new
+                    {
+                        id = a.Id,
+                        title = a.Title,
+                        content = a.Content,
+                        price = a.Price,
+                        location = a.Location,
+                        description = a.Description,
+                        contact = a.Contact,
+                        imagePath = !string.IsNullOrEmpty(a.ImagePath) 
+                            ? $"http://localhost:5131{a.ImagePath}" 
+                            : null,
+                        authorFirstName = a.AuthorFirstName,
+                        authorLastName = a.AuthorLastName,
+                        authorUsername = a.AuthorUsername,
+                        authorProfilePicture = !string.IsNullOrEmpty(a.AuthorProfilePicture) 
+                            ? $"http://localhost:5131{a.AuthorProfilePicture}" 
+                            : null,
+                        createdAt = a.CreatedAt
+                    };
+                }).ToList();
+
+                _logger.LogInformation($"Processed response with {response.Count} articles");
+                foreach (var item in response)
+                {
+                    _logger.LogInformation($"Response item: ID={item.id}, Title={item.title}, Author={item.authorFirstName} {item.authorLastName}");
+                }
+
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error in GetAllArticles: {ex.Message}");
+                _logger.LogError($"Stack trace: {ex.StackTrace}");
+                return StatusCode(500, new { message = "Error fetching articles", error = ex.Message });
+            }
+        }
+
+        [HttpGet("user")]
+        [Authorize]
+        public async Task<IActionResult> GetUserArticles()
+        {
+            try
+            {
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var articles = await _articleService.GetArticlesByUserIdAsync(userId);
+                var response = articles.Select(a => new
+                {
+                    id = a.Id,
+                    title = a.Title,
+                    content = a.Content,
+                    price = a.Price,
+                    location = a.Location,
+                    description = a.Description,
+                    contact = a.Contact,
+                    imagePath = !string.IsNullOrEmpty(a.ImagePath) 
+                        ? $"http://localhost:5131{a.ImagePath}"
+                        : null,
+                    createdAt = a.CreatedAt,
+                    userId = a.UserId,
+                    authorFirstName = a.AuthorFirstName,
+                    authorLastName = a.AuthorLastName,
+                    authorUsername = a.AuthorUsername,
+                    authorProfilePicture = !string.IsNullOrEmpty(a.AuthorProfilePicture) 
+                        ? $"http://localhost:5131{a.AuthorProfilePicture}"
+                        : null
+                });
+
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error in GetUserArticles: {ex.Message}");
+                return StatusCode(500, new { message = "Internal server error" });
+            }
         }
 
         [HttpPost]
         [Authorize]
         public async Task<IActionResult> CreateArticle([FromForm] ArticleDto articleDto)
         {
-            try 
+            try
             {
-                if (!ModelState.IsValid)
-                    return BadRequest(ModelState);
-
                 var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (userId == null)
-                    return Unauthorized(new { message = "User ID not found in token" });
+                var user = await _userService.GetUserByIdAsync(userId);
+                
+                if (user == null)
+                    return Unauthorized(new { message = "User not found" });
 
                 var article = new Article
                 {
@@ -47,121 +136,40 @@ namespace TTH.Backend.Controllers
                     Location = articleDto.Location,
                     Description = articleDto.Description,
                     Contact = articleDto.Contact,
-                    CreatedAt = DateTime.UtcNow,
-                    UserId = userId
+                    UserId = userId,
+                    CreatedAt = DateTime.UtcNow
                 };
 
                 if (articleDto.Image != null)
                 {
-                    var uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads");
-                    Directory.CreateDirectory(uploadsFolder);
-
-                    var uniqueFileName = Guid.NewGuid().ToString() + "_" + articleDto.Image.FileName;
-                    var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-                    using (var fileStream = new FileStream(filePath, FileMode.Create))
-                    {
-                        await articleDto.Image.CopyToAsync(fileStream);
-                    }
-
-                    article.ImagePath = $"/uploads/{uniqueFileName}";
+                    article.ImagePath = await SaveImageFile(articleDto.Image);
                 }
 
-                _context.Articles.Add(article);
-                await _context.SaveChangesAsync();
-
-                // Return article with complete data
-                var response = new
-                {
-                    message = "Article published successfully",
-                    article = new
-                    {
-                        Id = article.Id,
-                        Title = article.Title,
-                        Content = article.Content,
-                        Price = article.Price,
-                        Location = article.Location,
-                        Description = article.Description,
-                        Contact = article.Contact,
-                        CreatedAt = article.CreatedAt,
-                        ImagePath = article.ImagePath,
-                        Photo = !string.IsNullOrEmpty(article.ImagePath) 
-                            ? $"http://localhost:5131{article.ImagePath}"
-                            : null
-                    }
-                };
-
-                return Ok(response);
+                await _articleService.CreateAsync(article);
+                return Ok(new { message = "Article created successfully", article });
             }
             catch (Exception ex)
             {
                 _logger.LogError($"Error creating article: {ex.Message}");
-                return StatusCode(500, new { message = "Error creating article", error = ex.Message });
+                return StatusCode(500, new { message = "Error creating article" });
             }
         }
 
-        [HttpGet("user")]
-        [Authorize]
-        public async Task<ActionResult<IEnumerable<Article>>> GetUserArticles()
+        private async Task<string> SaveImageFile(IFormFile? image)
         {
-            try
+            if (image == null) return string.Empty;
+
+            var uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads");
+            Directory.CreateDirectory(uploadsFolder);
+            var uniqueFileName = $"{Guid.NewGuid()}_{image.FileName}";
+            var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+            using (var fileStream = new FileStream(filePath, FileMode.Create))
             {
-                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var articles = await _context.Articles
-                    .Where(a => a.UserId == userId)
-                    .OrderByDescending(a => a.CreatedAt)
-                    .Select(a => new
-                    {
-                        id = a.Id,
-                        title = a.Title,
-                        content = a.Content,
-                        description = a.Description,
-                        price = a.Price,
-                        location = a.Location,
-                        contact = a.Contact,
-                        createdAt = a.CreatedAt,
-                        imagePath = !string.IsNullOrEmpty(a.ImagePath) 
-                            ? $"http://localhost:5131{a.ImagePath}"
-                            : null
-                    })
-                    .ToListAsync();
-
-                _logger.LogInformation($"Articles fetched: {JsonSerializer.Serialize(articles)}");
-                return Ok(articles);
+                await image.CopyToAsync(fileStream);
             }
-            catch (Exception ex)
-            {
-                _logger.LogError($"Error in GetUserArticles: {ex.Message}");
-                return StatusCode(500, new { message = "Internal server error" });
-            }
-        }
 
-        [HttpDelete("reset")]  // Updated route to match frontend
-        [Authorize]
-        public async Task<IActionResult> DeleteUserArticles()  // Renamed for clarity
-        {
-            try
-            {
-                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(userId))
-                {
-                    return Unauthorized(new { message = "User not found in token" });
-                }
-
-                var articles = await _context.Articles
-                    .Where(a => a.UserId == userId)
-                    .ToListAsync();
-
-                _context.Articles.RemoveRange(articles);
-                await _context.SaveChangesAsync();
-
-                return Ok(new { message = "Articles deleted successfully" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"Error deleting articles: {ex.Message}");
-                return StatusCode(500, new { message = "Error deleting articles" });
-            }
+            return $"/uploads/{uniqueFileName}";
         }
 
         [HttpDelete("deleteAll")]
@@ -170,49 +178,139 @@ namespace TTH.Backend.Controllers
         {
             try
             {
-                // Delete all files in uploads directory
-                var uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads");
-                if (Directory.Exists(uploadsFolder))
-                {
-                    foreach (var file in Directory.GetFiles(uploadsFolder))
-                    {
-                        try
-                        {
-                            System.IO.File.Delete(file);
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogWarning($"Failed to delete file {file}: {ex.Message}");
-                        }
-                    }
-                }
-
-                // Delete all articles from database
-                await _context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE \"Articles\" RESTART IDENTITY CASCADE");
-                
-                return Ok(new { message = "All articles have been deleted" });
+                _logger.LogInformation("Starting DeleteAllArticles request");
+                await _articleService.DeleteAllAsync();
+                _logger.LogInformation("Successfully deleted all articles");
+                return Ok(new { message = "All articles deleted successfully" });
             }
             catch (Exception ex)
             {
                 _logger.LogError($"Error deleting all articles: {ex.Message}");
-                return StatusCode(500, new { message = "Failed to delete articles", error = ex.Message });
+                return StatusCode(500, new { message = "Error deleting articles" });
             }
         }
 
-        private string GetUserIdFromToken()
+        [HttpDelete("{id}")]
+        [Authorize]
+        public async Task<IActionResult> DeleteArticle(string id)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-            if (userIdClaim == null)
-                throw new UnauthorizedAccessException("User ID not found in token");
+            try
+            {
+                _logger.LogInformation($"Attempting to delete article with ID: {id}");
                 
-            return userIdClaim.Value;
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var article = await _articleService.GetByIdAsync(id);
+
+                if (article == null)
+                {
+                    _logger.LogWarning($"Article {id} not found");
+                    return NotFound(new { message = "Article not found" });
+                }
+
+                if (article.UserId != userId)
+                {
+                    _logger.LogWarning($"User {userId} attempted to delete article {id} without permission");
+                    return Forbid();
+                }
+
+                await _articleService.DeleteAsync(id);
+                _logger.LogInformation($"Article {id} deleted successfully");
+                
+                return Ok(new { message = "Article deleted successfully" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error deleting article: {ex.Message}");
+                return StatusCode(500, new { message = "Error deleting article" });
+            }
+        }
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetArticleById(string id)
+        {
+            try
+            {
+                _logger.LogInformation($"Fetching article with ID: {id}");
+                var article = await _articleService.GetByIdAsync(id);
+
+                if (article == null)
+                {
+                    _logger.LogWarning($"Article with ID {id} not found");
+                    return NotFound(new { message = "Article not found" });
+                }
+
+                var response = new
+                {
+                    id = article.Id,
+                    title = article.Title,
+                    content = article.Content,
+                    price = article.Price,
+                    location = article.Location,
+                    description = article.Description,
+                    contact = article.Contact,
+                    imagePath = !string.IsNullOrEmpty(article.ImagePath)
+                        ? $"http://localhost:5131{article.ImagePath}"
+                        : null,
+                    createdAt = article.CreatedAt,
+                    authorFirstName = article.AuthorFirstName,
+                    authorLastName = article.AuthorLastName,
+                    authorUsername = article.AuthorUsername,
+                    authorProfilePicture = !string.IsNullOrEmpty(article.AuthorProfilePicture)
+                        ? $"http://localhost:5131{article.AuthorProfilePicture}"
+                        : null
+                };
+
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error fetching article by ID: {ex.Message}");
+                return StatusCode(500, new { message = "Error fetching article" });
+            }
+        }
+
+        [HttpPut("{id}")]
+        [Authorize]
+        public async Task<IActionResult> UpdateArticle(string id, [FromForm] ArticleDto articleDto)
+        {
+            try
+            {
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var article = await _articleService.GetByIdAsync(id);
+
+                if (article == null)
+                {
+                    _logger.LogWarning($"Article with ID {id} not found");
+                    return NotFound(new { message = "Article not found" });
+                }
+
+                if (article.UserId != userId)
+                {
+                    _logger.LogWarning($"User {userId} attempted to update article {id} without permission");
+                    return Forbid();
+                }
+
+                article.Title = articleDto.Title;
+                article.Content = articleDto.Content;
+                article.Price = articleDto.Price;
+                article.Location = articleDto.Location;
+                article.Description = articleDto.Description;
+                article.Contact = articleDto.Contact;
+
+                if (articleDto.Image != null)
+                {
+                    article.ImagePath = await SaveImageFile(articleDto.Image);
+                }
+
+                await _articleService.UpdateAsync(id, article);
+                return Ok(new { message = "Article updated successfully", article });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error updating article: {ex.Message}");
+                return StatusCode(500, new { message = "Error updating article" });
+            }
         }
     }
-
-    public class ArticleCreateDto
-    {
-        public string Title { get; set; } = string.Empty;
-        public string Content { get; set; } = string.Empty;
-        public string? Photo { get; set; }
-    }
 }
+

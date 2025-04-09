@@ -1,9 +1,12 @@
 .publish-section {
-  margin: 2rem;
+  margin-top: 5rem;
   padding: 1rem;
-  
   border-radius: 10px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  width: 50%;
+  align-content: center;
+  margin-left: 25%;
+
 }
 
 .publish-form {
@@ -29,14 +32,15 @@ textarea.publish-input {
 }
 
 .publish-button {
-  grid-column: span 3; /* Button spans all columns */
   background-color: #007bff;
   color: rgb(50, 104, 184);
-  border: none;
   padding: 0.5rem 1rem;
   border-radius: 5px;
   cursor: pointer;
   transition: background-color 0.3s;
+  justify-content: end !important;
+  margin-left: 50%;
+  
 }
 
 .publish-button:hover {

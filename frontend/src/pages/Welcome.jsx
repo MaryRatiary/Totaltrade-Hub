@@ -73,19 +73,20 @@ const WelcomePage = () => {
       }
 
       const result = await response.json();
-      console.log('Server response:', result); // Debug log
+      console.log('Publication response:', result);
 
       if (result.article) {
+        // Adapter les noms des propriétés au format backend
         const newArticle = {
-          id: result.article.id,
-          title: result.article.title,
-          content: result.article.content,
-          description: result.article.description,
-          price: result.article.price,
-          location: result.article.location,
-          contact: result.article.contact,
-          imagePath: result.article.imagePath,
-          createdAt: result.article.createdAt
+          id: result.article.Id,
+          title: result.article.Title,
+          content: result.article.Content,
+          description: result.article.Description,
+          price: result.article.Price,
+          location: result.article.Location,
+          contact: result.article.Contact,
+          imagePath: result.article.ImagePath,
+          createdAt: result.article.CreatedAt
         };
         
         setArticles(prevArticles => [newArticle, ...prevArticles]);
@@ -166,39 +167,41 @@ const WelcomePage = () => {
   };
 
   return (
-    <div className="welcome-container">
-      <header>
-        <Navbar />
-      </header>
-
-      <PublishForm onPublish={handlePublish} />
+    <div className="min-h-screen bg-gray-100">
+      <Navbar />
       
-      <div className="admin-controls">
-        <button 
-          onClick={deleteAllArticles}
-          className="delete-all-button bg-red-600 hover:bg-red-800 text-white font-bold py-2 px-4 rounded mb-4"
-        >
-          Supprimer toutes les publications
-        </button>
-      </div>
+    
 
-      <Sidebar />
-      
-      <section className="articles">
-        <h2>Publications récentes</h2>
-        <div className="articles-grid">
-          {articles && articles.length > 0 ? (
-            articles.map((article, index) => (
-              <ArticleCard 
-                key={`${article.id || ''}-${index}`} 
-                article={article} 
-              />
-            ))
-          ) : (
-            <p className="no-articles">Aucun article publié pour le moment</p>
-          )}
+      <div className="container mx-auto px-4 py-8">
+        <PublishForm onPublish={handlePublish} />
+        
+        <div className="admin-controls">
+          <button 
+            onClick={deleteAllArticles}
+            className="delete-all-button bg-red-600 hover:bg-red-800 text-white font-bold py-2 px-4 rounded mb-4"
+          >
+            Supprimer toutes les publications
+          </button>
         </div>
-      </section>
+
+        <Sidebar />
+        
+        <section className="articles">
+          <h2>Publications récentes</h2>
+          <div className="articles-grid">
+            {articles && articles.length > 0 ? (
+              articles.map((article, index) => (
+                <ArticleCard 
+                  key={`${article.id || ''}-${index}`} 
+                  article={article} 
+                />
+              ))
+            ) : (
+              <p className="no-articles">Aucun article publié pour le moment</p>
+            )}
+          </div>
+        </section>
+      </div>
     </div>
   );
 };

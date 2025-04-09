@@ -1,14 +1,13 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using TTH.Backend.Data;
 using TTH.Backend.Models;
-using System.Text.Json;
 using TTH.Backend.Models.DTOs;
-using BCrypt.Net;
+using TTH.Backend.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using TTH.Backend.Models.DTOs.Auth;
 
 namespace TTH.Backend.Controllers
 {
@@ -16,20 +15,29 @@ namespace TTH.Backend.Controllers
     [Route("api/[controller]")]
     public class AuthController : ControllerBase
     {
-        private readonly AppDbContext _context;
-        private readonly ILogger<AuthController> _logger;
+        private readonly UserService _userService;
         private readonly IConfiguration _configuration;
+        private readonly ILogger<AuthController> _logger;
 
-        public AuthController(AppDbContext context, ILogger<AuthController> logger, IConfiguration configuration)
+        public AuthController(
+            UserService userService,
+            IConfiguration configuration,
+            ILogger<AuthController> logger)
         {
-            _context = context;
-            _logger = logger;
+            _userService = userService;
             _configuration = configuration;
+            _logger = logger;
         }
 
         [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] UserRegistrationDto registrationDto)
+        public async Task<ActionResult<User>> Register(UserDto request)
         {
+            var user = await _userService.GetByEmailAsync(request.Email);
+            if (user != null)
+            {
+                return BadRequest("User already exists");
+            }
+
             try
             {
                 if (!ModelState.IsValid)
@@ -37,35 +45,34 @@ namespace TTH.Backend.Controllers
                     return BadRequest(ModelState);
                 }
 
-                var user = new User
+                var newUser = new User
                 {
-                    Email = registrationDto.Email,
-                    Username = registrationDto.Username,
-                    FirstName = registrationDto.FirstName,
-                    LastName = registrationDto.LastName,
-                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(registrationDto.Password),
-                    Phone = registrationDto.Phone,
-                    Residence = registrationDto.Residence,
-                    Birthdate = registrationDto.Birthdate ?? DateTime.UtcNow,
-                    FaceImage = registrationDto.FaceImage,
+                    Email = request.Email,
+                    Username = request.Username,
+                    FirstName = request.FirstName,
+                    LastName = request.LastName,
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
+                    Phone = request.Phone,
+                    Residence = request.Residence,
+                    Birthdate = request.Birthdate ?? DateTime.UtcNow,
+                    FaceImage = request.FaceImage,
                     IsRegistrationComplete = true
                 };
 
-                await _context.Users.AddAsync(user);
-                await _context.SaveChangesAsync();
+                await _userService.CreateAsync(newUser);
                 
                 return Ok(new { 
                     message = "User registered successfully",
                     user = new {
-                        user.Id,
-                        user.Username,
-                        user.Email,
-                        user.FirstName,
-                        user.LastName,
-                        user.Phone,
-                        user.Residence,
-                        user.FaceImage,
-                        user.Birthdate
+                        newUser.Id,
+                        newUser.Username,
+                        newUser.Email,
+                        newUser.FirstName,
+                        newUser.LastName,
+                        newUser.Phone,
+                        newUser.Residence,
+                        newUser.FaceImage,
+                        newUser.Birthdate
                     }
                 });
             }
@@ -77,12 +84,11 @@ namespace TTH.Backend.Controllers
         }
 
         [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] UserLoginDto loginDto)
+        public async Task<IActionResult> Login([FromBody] Models.DTOs.Auth.UserLoginDto loginDto)
         {
             try
             {
-                var user = await _context.Users
-                    .FirstOrDefaultAsync(u => u.Email == loginDto.Email);
+                var user = await _userService.GetByEmailAsync(loginDto.Email);
 
                 if (user == null || !BCrypt.Net.BCrypt.Verify(loginDto.Password, user.PasswordHash))
                     return Unauthorized(new { message = "Invalid credentials" });
@@ -119,8 +125,7 @@ namespace TTH.Backend.Controllers
             try
             {
                 var email = Request.Headers["User-Email"].ToString();
-                var user = await _context.Users
-                    .FirstOrDefaultAsync(u => u.Email == email);
+                var user = await _userService.GetByEmailAsync(email);
 
                 if (user == null)
                 {
@@ -128,7 +133,7 @@ namespace TTH.Backend.Controllers
                 }
 
                 user.IsRegistrationComplete = true;
-                await _context.SaveChangesAsync();
+                await _userService.UpdateAsync(user.Id, user);
 
                 return Ok(new { message = "Registration completed successfully" });
             }
@@ -139,20 +144,42 @@ namespace TTH.Backend.Controllers
             }
         }
 
+        [HttpPost("signout")]
+        [Authorize]
+        public IActionResult Logout()
+        {
+            try
+            {
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                _logger.LogInformation($"User {userId} logging out");
+
+                // Vous pouvez ajouter ici la logique pour invalider le token si nécessaire
+                
+                return Ok(new { message = "Logged out successfully" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Logout error: {ex.Message}");
+                return StatusCode(500, new { message = "An error occurred during logout" });
+            }
+        }
+
         private string GenerateJwtToken(User user)
         {
             var tokenSecret = _configuration["AppSettings:Token"];
             if (string.IsNullOrEmpty(tokenSecret))
                 throw new InvalidOperationException("Token secret is not configured");
 
-            var key = Encoding.UTF8.GetBytes(tokenSecret); // Ensure tokenSecret is not null
+            if (string.IsNullOrEmpty(user.Id))
+                throw new InvalidOperationException("User ID is required");
 
+            var key = Encoding.UTF8.GetBytes(tokenSecret);
             var creds = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha512Signature);
 
             var token = new JwtSecurityToken(
                 claims: new List<Claim>
                 {
-                    new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                    new Claim(ClaimTypes.NameIdentifier, user.Id),
                     new Claim(ClaimTypes.Email, user.Email)
                 },
                 expires: DateTime.Now.AddDays(1),

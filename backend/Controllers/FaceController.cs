@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using TTH.Backend.Data;
+using TTH.Backend.Services;
 using TTH.Backend.Models;
 using System.Text.Json;
 
@@ -10,12 +9,12 @@ namespace TTH.Backend.Controllers
     [Route("api/[controller]")]
     public class FaceController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly UserService _userService;
         private readonly ILogger<FaceController> _logger;
 
-        public FaceController(AppDbContext context, ILogger<FaceController> logger)
+        public FaceController(UserService userService, ILogger<FaceController> logger)
         {
-            _context = context;
+            _userService = userService;
             _logger = logger;
         }
 
@@ -24,14 +23,13 @@ namespace TTH.Backend.Controllers
         {
             try
             {
-                var user = await _context.Users
-                    .FirstOrDefaultAsync(u => u.Id == dto.UserId.ToString()); // Ensure userId is a string
+                var user = await _userService.GetUserByIdAsync(dto.UserId.ToString()); // Ensure userId is a string
 
                 if (user == null)
                     return NotFound(new { message = "User not found" });
 
                 user.FaceImage = dto.Image;
-                await _context.SaveChangesAsync();
+                await _userService.UpdateUserAsync(user);
                 
                 return Ok(new { message = "Face data uploaded successfully" });
             }
@@ -47,12 +45,12 @@ namespace TTH.Backend.Controllers
         {
             try
             {
-                var user = await _context.Users.FindAsync(dto.UserId.ToString()); // Ensure userId is a string
+                var user = await _userService.GetUserByIdAsync(dto.UserId.ToString()); // Ensure userId is a string
                 if (user == null)
                     return NotFound(new { message = "User not found" });
 
                 user.FaceImage = dto.ImageData;
-                await _context.SaveChangesAsync();
+                await _userService.UpdateUserAsync(user);
 
                 return Ok(new { message = "Face data saved successfully" });
             }

@@ -1,0 +1,168 @@
+.dashboard-container {
+    display: flex;
+    height: 50vh;
+    background-color: #f9f9f9;
+    margin-right: 20px;
+    margin-top: 10rem;
+  }
+  .calendar-main {
+
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    bottom: 0;
+  }
+  
+  .calendar-container {
+    display: flex;
+    width: 75%;
+    max-width: 1200px;
+    background: #fff;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+    overflow: hidden;
+    position:absolute;
+    justify-content: right;
+    right: 10px;
+    top: 40px;
+    
+  }
+  
+  .calendar-left {
+    flex: 1;
+    padding: 20px;
+    border-right: 1px solid #ddd;
+    width:50%;
+  }
+  
+  .calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  
+  }
+  
+  .prev-btn,
+  .next-btn {
+    background:  var(--blue);
+    color: #fff;
+    border: none;
+    padding: 10px;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  
+  .current-date {
+    font-size: 1.5rem;
+    font-weight: bold;
+  }
+  
+  .calendar-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    text-align: center;
+    font-weight: bold;
+    margin-bottom: 10px;
+  }
+  
+  .calendar-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    text-align: center;
+    gap: 5px;
+  }
+  
+  .calendar-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+  }
+  
+  .goto-section {
+    display: flex;
+    gap: 10px;
+  }
+  
+  .date-input {
+    padding: 5px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+  }
+  
+  .goto-btn,
+  .today-btn {
+    background:  var(--blue);
+    color: #fff;
+    border: none;
+    padding: 10px;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  
+  .calendar-right {
+    flex: 1;
+    padding: 20px;
+  }
+  
+  .today-info {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  
+  .event-day {
+    font-size: 1.2rem;
+    font-weight: bold;
+  }
+  
+  .event-date {
+    font-size: 1rem;
+    color: #555;
+  }
+  
+  .add-event-section {
+    margin-top: 20px;
+  }
+  
+  .add-event-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  
+  .add-event-body input {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+  }
+  
+  .add-event-btn {
+    background: #28a745;
+    color: #fff;
+    border: none;
+    padding: 10px;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  
+  .add-event-btn-circle {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background:  var(--blue);
+    color: #fff;
+    border: none;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  }
+  
