@@ -86,14 +86,32 @@ namespace TTH.Backend.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] Models.DTOs.Auth.UserLoginDto loginDto)
         {
+            _logger.LogInformation($"Login attempt for email: {loginDto.Email}");
+            
             try
             {
+                if (string.IsNullOrEmpty(loginDto.Email) || string.IsNullOrEmpty(loginDto.Password))
+                {
+                    return BadRequest(new { message = "Email and password are required" });
+                }
+
                 var user = await _userService.GetByEmailAsync(loginDto.Email);
 
-                if (user == null || !BCrypt.Net.BCrypt.Verify(loginDto.Password, user.PasswordHash))
-                    return Unauthorized(new { message = "Invalid credentials" });
+                if (user == null)
+                {
+                    _logger.LogWarning($"Login failed: User not found for email {loginDto.Email}");
+                    return Unauthorized(new { message = "Invalid email or password" });
+                }
+
+                if (!BCrypt.Net.BCrypt.Verify(loginDto.Password, user.PasswordHash))
+                {
+                    _logger.LogWarning($"Login failed: Invalid password for email {loginDto.Email}");
+                    return Unauthorized(new { message = "Invalid email or password" });
+                }
 
                 var token = GenerateJwtToken(user);
+
+                _logger.LogInformation($"Login successful for user {user.Id}");
 
                 return Ok(new
                 {
@@ -115,7 +133,8 @@ namespace TTH.Backend.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = ex.Message });
+                _logger.LogError($"Login error: {ex.Message}");
+                return StatusCode(500, new { message = "An error occurred during login" });
             }
         }
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FaHeart, FaRegHeart, FaComment, FaShare, FaBookmark, FaRegBookmark, FaEdit, FaEye, FaTrash } from 'react-icons/fa';
 import './ArticleCard.css';
+import { API_BASE_URL } from '../services/config';
 
 const ArticleCard = ({ article, onDelete, onEdit }) => {
   const [isLiked, setIsLiked] = useState(false);
@@ -98,7 +99,7 @@ const ArticleCard = ({ article, onDelete, onEdit }) => {
       }
 
       console.log('Deleting article:', article.id);
-      const response = await fetch(`http://localhost:5131/api/articles/${article.id}`, {
+      const response = await fetch(`${API_BASE_URL}/articles/${article.id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${currentUser.token}`,
@@ -146,7 +147,7 @@ const ArticleCard = ({ article, onDelete, onEdit }) => {
             return;
         }
 
-        const response = await fetch('http://localhost:5131/api/articles/deleteAll', {
+        const response = await fetch(`${API_BASE_URL}/articles/deleteAll`, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${currentUser.token}`,

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaSearch, FaTimes } from "react-icons/fa";
 import { useMediaQuery } from 'react-responsive';
+import { API_BASE_URL } from '../services/config';
 import './SearchBar.css';
 
 const SearchBar = () => {
@@ -22,7 +23,7 @@ const SearchBar = () => {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`http://localhost:5131/api/search?query=${encodeURIComponent(query)}`, {
+      const response = await fetch(`${API_BASE_URL}/search?query=${encodeURIComponent(query)}`, {
         headers: {
           'Authorization': 'Basic ' + btoa('root:example')
         }

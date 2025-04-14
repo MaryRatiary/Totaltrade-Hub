@@ -72,6 +72,16 @@
   color: #f69c02;
 }
 
+.menu-toggle {
+  display: none;
+  background: none;
+  border: none;
+  color: #ffffff;
+  cursor: pointer;
+  margin-left: auto;
+  padding: 0.5rem;
+}
+
 /* Responsive styles */
 @media (max-width: 768px) {
   .navbar {
@@ -86,7 +96,13 @@
 
   .navbar-brand {
     left: 3px;
+    padding: 0 1rem;
+    justify-content: space-between;
+  }
 
+  .menu-toggle {
+    display: block;
+    z-index: 100;
   }
 
   .navbar-links {
@@ -189,6 +205,48 @@
     pointer-events: none;
     opacity: 0;
   }
+
+  .navbar-links.mobile {
+    position: fixed;
+    top: 80px;
+    left: -100%;
+    width: 70%;
+    height: calc(100vh - 80px);
+    background-color: #1f2937;
+    flex-direction: column;
+    padding: 2rem 1rem;
+    transition: all 0.3s ease-in-out;
+    z-index: 99;
+  }
+
+  .navbar-links.mobile.active {
+    left: 0;
+  }
+
+  .navbar-links.mobile li {
+    margin: 1.5rem 0;
+    width: 100%;
+    text-align: left;
+  }
+
+  .navbar-links.mobile .recherche {
+    width: 100%;
+  }
+
+  .notification-dropdown {
+    position: fixed;
+    top: 80px;
+    left: 0;
+    width: 100%;
+    max-height: calc(100vh - 80px);
+    overflow-y: auto;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
 }
 
 /* Déplacer les styles du logo en dehors du media query */
@@ -290,6 +348,41 @@
 .notification-time {
   color: #9CA3AF;
   font-size: 12px;
+}
+
+.notification-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.notification-actions button {
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.accept-button {
+  background-color: #22c55e;
+  color: white;
+  border: none;
+}
+
+.accept-button:hover {
+  background-color: #16a34a;
+}
+
+.reject-button {
+  background-color: #ef4444;
+  color: white;
+  border: none;
+}
+
+.reject-button:hover {
+  background-color: #dc2626;
 }
 
 .no-notifications {

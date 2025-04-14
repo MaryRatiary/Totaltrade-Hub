@@ -51,6 +51,8 @@ namespace TTH.Backend.Models // Ensure this namespace matches the one imported i
         public virtual ICollection<FriendRequest> SentFriendRequests { get; set; } = new List<FriendRequest>();
         public virtual ICollection<FriendRequest> ReceivedFriendRequests { get; set; } = new List<FriendRequest>();
 
+        public List<string> Friends { get; set; } = new List<string>();
+
         public bool ValidatePassword(string inputPassword)
         {
             // Compares the input password with the stored hashed password

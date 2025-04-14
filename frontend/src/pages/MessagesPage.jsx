@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './MessagesPage.css';
 import Navbar from '../components/Navbar';
+import { API_BASE_URL } from '../services/config';
 
 const MessagesPage = () => {
   const navigate = useNavigate();
@@ -41,7 +42,7 @@ const MessagesPage = () => {
   const fetchConversations = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('http://localhost:5131/api/message/conversations', getAuthHeaders());
+      const response = await axios.get(`${API_BASE_URL}/message/conversations`, getAuthHeaders());
       setConversations(response.data);
       setError(null);
     } catch (error) {
@@ -56,7 +57,7 @@ const MessagesPage = () => {
     try {
       setLoading(true);
       const response = await axios.get(
-        `http://localhost:5131/api/message/messages/${otherUserId}`,
+        `${API_BASE_URL}/message/messages/${otherUserId}`,
         getAuthHeaders()
       );
       setMessages(response.data);
@@ -75,7 +76,7 @@ const MessagesPage = () => {
 
     try {
       const response = await axios.post(
-        'http://localhost:5131/api/message/send',
+        `${API_BASE_URL}/message/send`,
         {
           receiverId: selectedConversation.id,
           content: message

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Navbar from '../components/Navbar';
+import { API_BASE_URL } from '../services/config';
 
 const UserProfile = () => {
   const [user, setUser] = useState(null);
@@ -9,10 +10,10 @@ const UserProfile = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
   const { userId } = useParams();
-  const API_BASE_URL = 'http://localhost:5131/api';
   const [showPhotoDropdown, setShowPhotoDropdown] = useState(false);
   const [previousPhotos, setPreviousPhotos] = useState([]);
   const [isOwnProfile, setIsOwnProfile] = useState(false);
+  const [friendRequestStatus, setFriendRequestStatus] = useState(null); // 'pending', 'accepted', null
 
   const loadUserProfile = async () => {
     const currentUser = JSON.parse(localStorage.getItem('currentUser'));
@@ -117,7 +118,80 @@ const UserProfile = () => {
 
   useEffect(() => {
     loadUserProfile();
+    checkFriendshipStatus();
   }, [userId, navigate]);
+
+  const checkFriendshipStatus = async () => {
+    if (!userId) return;
+
+    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    if (!currentUser?.token) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/friendrequest/friends`, {
+        headers: {
+          'Authorization': `Bearer ${currentUser.token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const { friends } = await response.json();
+        if (friends.some(friend => friend.id === userId)) {
+          setFriendRequestStatus('accepted');
+        } else {
+          // Vérifier s'il y a une demande en attente
+          const pendingResponse = await fetch(`${API_BASE_URL}/friendrequest/pending`, {
+            headers: {
+              'Authorization': `Bearer ${currentUser.token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (pendingResponse.ok) {
+            const pendingRequests = await pendingResponse.json();
+            if (pendingRequests.some(req => req.senderId === userId || req.receiverId === userId)) {
+              setFriendRequestStatus('pending');
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error checking friendship status:', error);
+    }
+  };
+
+  const handleSendFriendRequest = async () => {
+    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    if (!currentUser?.token) {
+      navigate('/login');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/friendrequest/send`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${currentUser.token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          receiverId: userId
+        })
+      });
+
+      if (response.ok) {
+        setFriendRequestStatus('pending');
+        alert('Demande d\'ami envoyée avec succès');
+      } else {
+        const error = await response.json();
+        alert(error.message || 'Erreur lors de l\'envoi de la demande d\'ami');
+      }
+    } catch (error) {
+      console.error('Error sending friend request:', error);
+      alert('Erreur lors de l\'envoi de la demande d\'ami');
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('currentUser');
@@ -270,9 +344,37 @@ const UserProfile = () => {
                   {/* User Info */}
                   <div className="flex flex-col space-y-3">
                     <h1 className="text-2xl font-semibold">{user.FirstName} {user.LastName}</h1>
-                    <p className="text-gray-600"> email: {user.Email}</p>
-                    <p className="text-gray-500"> contact: {user.Phone || 'No phone number'}</p>
-                    <p className="text-gray-500"> habite a {user.Residence || 'No address'}</p>
+                    <p className="text-gray-600">email: {user.Email}</p>
+                    <p className="text-gray-500">contact: {user.Phone || 'No phone number'}</p>
+                    <p className="text-gray-500">habite a {user.Residence || 'No address'}</p>
+                    
+                    {/* Bouton d'ajout d'ami */}
+                    {!isOwnProfile && (
+                      <div className="mt-4">
+                        {friendRequestStatus === 'accepted' ? (
+                          <button 
+                            className="bg-green-500 text-white px-4 py-2 rounded-md opacity-50 cursor-not-allowed"
+                            disabled
+                          >
+                            Déjà amis
+                          </button>
+                        ) : friendRequestStatus === 'pending' ? (
+                          <button 
+                            className="bg-yellow-500 text-white px-4 py-2 rounded-md opacity-50 cursor-not-allowed"
+                            disabled
+                          >
+                            Demande en attente
+                          </button>
+                        ) : (
+                          <button 
+                            onClick={handleSendFriendRequest}
+                            className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors"
+                          >
+                            Ajouter en ami
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

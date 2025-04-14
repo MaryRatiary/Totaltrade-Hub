@@ -36,16 +36,18 @@ builder.Services.AddSingleton<IMongoClient>(sp =>
 builder.Services.AddScoped<ArticleService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<MessageService>();
+builder.Services.AddScoped<FriendRequestService>();
 
 // Configure CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", builder =>
     {
-        builder.WithOrigins("http://localhost:5173")
-               .AllowAnyMethod()
-               .AllowAnyHeader()
-               .AllowCredentials();
+        builder.SetIsOriginAllowed(_ => true)
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .WithExposedHeaders("Authorization")
+            .AllowCredentials();
     });
 });
 
@@ -63,6 +65,18 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateLifetime = true,
             ClockSkew = TimeSpan.Zero
         };
+        
+        options.Events = new JwtBearerEvents
+        {
+            OnAuthenticationFailed = context =>
+            {
+                if (context.Exception.GetType() == typeof(SecurityTokenExpiredException))
+                {
+                    context.Response.Headers.Add("Token-Expired", "true");
+                }
+                return Task.CompletedTask;
+            }
+        };
     });
 
 // Build the application
@@ -75,24 +89,33 @@ if (!Directory.Exists(uploadsPath))
     Directory.CreateDirectory(uploadsPath);
 }
 
-// Configure Kestrel for a single port
-app.Urls.Add("http://localhost:5131");
+// Configure Kestrel for all network interfaces
+app.Urls.Clear();
+app.Urls.Add("http://0.0.0.0:5131");
+app.Urls.Add("https://0.0.0.0:5132");  // Add HTTPS endpoint
 
-// Important: Correct middleware order
-app.UseStaticFiles(); // Add this line before app.UseRouting()
-app.UseRouting();
-app.UseCors("AllowFrontend");
-app.UseAuthentication();
-app.UseAuthorization();
-
-// Configure the HTTP request pipeline
+// Configure middleware pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+// Important: Correct middleware order
+app.UseStaticFiles(new StaticFileOptions
+{
+    ServeUnknownFileTypes = true,
+    DefaultContentType = "application/octet-stream"
+});
+
+app.UseRouting();
+app.UseCors("AllowFrontend");
+app.UseAuthentication();
+app.UseAuthorization();
+
+// Add minimal API health check endpoint
+app.MapMethods("/api", new[] { "GET", "HEAD" }, () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
+
 app.MapControllers();
 
 app.Run();

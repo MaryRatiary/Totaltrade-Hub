@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import Webcam from 'react-webcam';
 import { useNavigate } from 'react-router-dom';
 import * as faceapi from 'face-api.js';
+import { API_BASE_URL } from '../services/config';
 
 const FaceRecognition = () => {
   const webcamRef = useRef(null);
@@ -70,7 +71,7 @@ const FaceRecognition = () => {
   const saveFaceData = async (detections, imageData) => {
     try {
         const userData = JSON.parse(localStorage.getItem('currentUser'));
-        const response = await fetch('http://localhost:5131/api/Face/face-data', {
+        const response = await fetch(`${API_BASE_URL}/Face/face-data`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

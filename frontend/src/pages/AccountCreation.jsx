@@ -1,37 +1,40 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { apiService } from '../services/api';
+import { API_BASE_URL } from '../services/config';
 
 const AccountCreation = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const createAccount = async () => {
+    const completeRegistration = async () => {
       try {
         const email = localStorage.getItem('userEmail');
-        const response = await fetch('http://localhost:5135/api/Auth/complete-registration', {
+        if (!email) {
+          navigate('/register');
+          return;
+        }
+
+        const response = await fetch(`${API_BASE_URL}/user/complete-profile`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'User-Email': email
-          }
+          },
+          body: JSON.stringify({ email }),
         });
 
-        const data = await response.json();
-        console.log('Complete registration response:', data);
-
-        if (response.ok) {
-          navigate('/');
-        } else {
-          console.error('Failed to complete registration:', data.message);
-          navigate('/register');
+        if (!response.ok) {
+          throw new Error('Failed to complete registration');
         }
+
+        navigate('/');
       } catch (error) {
         console.error('Error:', error);
         navigate('/register');
       }
     };
 
-    createAccount();
+    completeRegistration();
   }, [navigate]);
 
   return (

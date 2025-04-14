@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom'; // Add this import
+import { API_BASE_URL } from '../services/config';
 
 import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
@@ -24,8 +25,6 @@ const WelcomePage = () => {
     fetchArticles();
     fetchUsers();
   }, []);
-
-  const API_BASE_URL = 'http://localhost:5131/api';
 
   const fetchArticles = async () => {
     try {

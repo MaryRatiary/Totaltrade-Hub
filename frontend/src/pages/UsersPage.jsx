@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
 import { useNavigate } from "react-router-dom";
+import { API_BASE_URL } from '../services/config';
 
 const UsersPage = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
-  const API_BASE_URL = 'http://localhost:5131/api';
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -47,6 +47,37 @@ const UsersPage = () => {
 
   const handleViewProfile = (userId) => {
     navigate(`/profile/${userId}`);
+  };
+
+  const handleSendFriendRequest = async (userId) => {
+    try {
+      const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+      if (!currentUser?.token) {
+        navigate('/login');
+        return;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/friendrequest/send`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${currentUser.token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          receiverId: userId
+        })
+      });
+
+      if (response.ok) {
+        alert('Demande d\'ami envoyée avec succès');
+      } else {
+        const error = await response.json();
+        alert(error.message || 'Erreur lors de l\'envoi de la demande d\'ami');
+      }
+    } catch (error) {
+      console.error('Error sending friend request:', error);
+      alert('Erreur lors de l\'envoi de la demande d\'ami');
+    }
   };
 
   if (loading) {
@@ -127,10 +158,12 @@ const UsersPage = () => {
                     >
                       Voir le profil
                     </button>
-                    <div className="flex items-center text-gray-600">
-                      <span className="mr-2">{user.Articles?.length || 0}</span>
-                      <span>publications</span>
-                    </div>
+                    <button
+                      onClick={() => handleSendFriendRequest(user.Id)}
+                      className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors duration-300"
+                    >
+                      Ajouter en ami
+                    </button>
                   </div>
                 </div>
               </div>

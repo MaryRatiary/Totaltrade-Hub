@@ -1,5 +1,9 @@
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { ToastProvider } from './context/ToastContext';
+import NetworkStatus from './components/NetworkStatus';
+import QueueStatus from './components/QueueStatus';
+import PendingChanges from './components/PendingChanges';
 import WelcomePage from './pages/Welcome';
 import LoginPage from './pages/LoginPage';
 import Register from './pages/Register';
@@ -14,22 +18,27 @@ import MessagesPage from './pages/MessagesPage';
 
 const App = () => {
   return (
-    <Router>
-      <Routes>
-        <Route path="/WelcomePage" element={<WelcomePage />} />
-        <Route path="/" element={<LoginPage />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/face-recognition" element={<FaceRecognition />} />
-        <Route path="/account-creation" element={<AccountCreation />} />
-        <Route path="/users" element={<UsersPage />} />
-        <Route path="/profile" element={<UserProfile />} />
-        <Route path="/profile/:userId" element={<UserProfile />} />
-        <Route path="/settings" element={<Settings/>} />
-        <Route path="/calendar" element={<Calendar/>}/>
-        <Route path="/messages" element={<MessagesPage />} />
-      </Routes>
-    </Router>
+    <ToastProvider>
+      <Router>
+        <NetworkStatus />
+        <QueueStatus />
+        <PendingChanges />
+        <Routes>
+          <Route path="/WelcomePage" element={<WelcomePage />} />
+          <Route path="/" element={<LoginPage />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/face-recognition" element={<FaceRecognition />} />
+          <Route path="/account-creation" element={<AccountCreation />} />
+          <Route path="/users" element={<UsersPage />} />
+          <Route path="/profile" element={<UserProfile />} />
+          <Route path="/profile/:userId" element={<UserProfile />} />
+          <Route path="/settings" element={<Settings/>} />
+          <Route path="/calendar" element={<Calendar/>}/>
+          <Route path="/messages" element={<MessagesPage />} />
+        </Routes>
+      </Router>
+    </ToastProvider>
   );
 };
 

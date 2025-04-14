@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import './LoginPage.css'; // Assuming you have a CSS file for styling
+import './LoginPage.css';
 import logo from '/tth-removebg.png';
+import { apiService } from '../services/api';
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -11,25 +12,13 @@ const LoginPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('http://localhost:5131/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(credentials),
-      });
-
-      if (!response.ok) {
-        throw new Error('Invalid credentials');
-      }
-
-      const data = await response.json();
+      const data = await apiService.login(credentials);
       localStorage.setItem('currentUser', JSON.stringify({
         token: data.token,
         ...data.user
       }));
       
-      navigate('/WelcomePage'); // Navigate to WelcomePage after login
+      navigate('/WelcomePage');
     } catch (error) {
       setError(error.message);
     }

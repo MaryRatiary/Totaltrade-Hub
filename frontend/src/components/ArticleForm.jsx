@@ -1,4 +1,5 @@
 import React from 'react';
+import { API_BASE_URL } from '../services/config';
 
 const ArticleForm = ({ isDropdownOpen, setIsDropdownOpen, article, handleInputChange, handleImageDrop, handleSubmit }) => {
   return (

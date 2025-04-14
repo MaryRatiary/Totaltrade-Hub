@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../services/config';
 
 const UsersList = () => {
   const [users, setUsers] = useState([]);
@@ -11,7 +12,7 @@ const UsersList = () => {
         setLoading(true);
         console.log('Fetching users...');
         
-        const response = await fetch('http://localhost:5131/api/Users', {
+        const response = await fetch(`${API_BASE_URL}/Users`, {
           method: 'GET',
           headers: {
             'Accept': 'application/json',

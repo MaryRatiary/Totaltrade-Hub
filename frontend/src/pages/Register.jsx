@@ -1,178 +1,163 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import './Register.css' 
+import './Register.css';
+import { apiService } from '../services/api';
+import { useLoading } from '../hooks/useLoading';
+import { useFormValidation } from '../hooks/useFormValidation';
+import { useToast } from '../context/ToastContext';
+import LoadingOverlay from '../components/LoadingOverlay';
+
 const Register = () => {
   const navigate = useNavigate();
+  const isLoading = useLoading('register');
+  const { showToast } = useToast();
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    birthdate: '',
+    residence: '',
+    password: '',
+    confirmPassword: ''
+  });
 
-  const handleRegister = async () => {
-    try {
-      const password = document.getElementById('password').value;
-      const confirmPassword = document.getElementById('confirmPassword').value;
-      const email = document.getElementById('email').value;
-
-      // Validate email format
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        alert('Format d\'email invalide');
-        return;
-      }
-
-      if (password !== confirmPassword) {
-        alert('Les mots de passe ne correspondent pas');
-        return;
-      }
-
-      const birthdate = document.getElementById('birthdate').value;
-      const userData = {
-        firstName: document.getElementById('firstName').value,
-        lastName: document.getElementById('lastName').value,
-        email: document.getElementById('email').value,
-        phone: document.getElementById('phone').value,
-        birthdate: birthdate ? new Date(birthdate).toISOString() : new Date().toISOString(),
-        residence: document.getElementById('residence').value,
-        password: password
-      };
-
-      console.log('Sending registration data:', userData);
-
-      const response = await fetch('http://localhost:5131/api/Auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(userData),
-      });
-
-      const data = await response.json();
-      console.log('Server response:', data);
-
-      if (response.ok) {
-        localStorage.setItem('userEmail', userData.email);
-        console.log('Registration successful');
-        navigate('/face-recognition');
-      } else {
-        console.error('Registration failed:', data);
-        alert(data.message || (data.errors ? Object.values(data.errors).flat().join('\n') : 'Échec de l\'inscription'));
-      }
-    } catch (error) {
-      console.error('Registration error:', error);
-      alert('Erreur lors de l\'inscription. Veuillez vérifier votre connexion et réessayer.');
+  const validationRules = {
+    firstName: { required: true, minLength: 2 },
+    lastName: { required: true, minLength: 2 },
+    email: { 
+      required: true, 
+      pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+      message: 'Format d\'email invalide'
+    },
+    phone: { required: true },
+    birthdate: { required: true },
+    residence: { required: true },
+    password: { 
+      required: true, 
+      minLength: 6,
+      message: 'Le mot de passe doit contenir au moins 6 caractères'
+    },
+    confirmPassword: { 
+      required: true,
+      match: 'password',
+      message: 'Les mots de passe ne correspondent pas'
     }
   };
 
+  const { errors, validate, clearErrors } = useFormValidation(validationRules);
+
+  const handleChange = (e) => {
+    const { id, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [id]: value
+    }));
+    clearErrors();
+  };
+
+  const handleRegister = async () => {
+    try {
+      if (!validate(formData)) {
+        showToast('Veuillez corriger les erreurs dans le formulaire', 'error');
+        return;
+      }
+
+      const userData = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phone: formData.phone,
+        birthdate: formData.birthdate ? new Date(formData.birthdate).toISOString() : new Date().toISOString(),
+        residence: formData.residence,
+        password: formData.password
+      };
+
+      await apiService.register(userData);
+      showToast('Compte créé avec succès!', 'success');
+      localStorage.setItem('userEmail', userData.email);
+      navigate('/face-recognition');
+      
+    } catch (error) {
+      showToast(error.message || 'Erreur lors de l\'inscription', 'error');
+    }
+  };
+
+  const renderField = (id, label, type = 'text', options = null) => (
+    <div className="mb-4">
+      <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor={id}>
+        {label}
+      </label>
+      {options ? (
+        <select
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          id={id}
+          value={formData[id]}
+          onChange={handleChange}
+        >
+          <option value="">Sélectionnez un lieu</option>
+          {options.map(opt => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
+      ) : (
+        <input
+          className={`shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline ${
+            errors[id] ? 'border-red-500' : ''
+          }`}
+          id={id}
+          type={type}
+          value={formData[id]}
+          onChange={handleChange}
+        />
+      )}
+      {errors[id] && (
+        <p className="text-red-500 text-xs italic">{errors[id]}</p>
+      )}
+    </div>
+  );
+
+  const residenceOptions = [
+    { value: 'antananarivo', label: 'Antananarivo' },
+    { value: 'toamasina', label: 'Toamasina' },
+    { value: 'fianarantsoa', label: 'Fianarantsoa' },
+    { value: 'mahajanga', label: 'Mahajanga' },
+    { value: 'toliara', label: 'Toliara' },
+    { value: 'antsiranana', label: 'Antsiranana' }
+  ];
+
   return (
-    <div className=" baky flex items-center justify-center min-h-screen bg-#1f2937">
-       <Link
+    <div className="baky flex items-center justify-center min-h-screen bg-#1f2937">
+      {isLoading && <LoadingOverlay message="Création de votre compte..." />}
+      
+      <Link
         className="absolute top-4 right-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
         to="/"
       >
         Se connecter
       </Link>
+      
       <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
         <h2 className="text-2xl font-bold mb-6 text-center">S'inscrire</h2>
-        <form>
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="firstName">
-              Prénom
-            </label>
-            <input
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              id="firstName"
-              type="text"
-              placeholder="Prénom"
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="lastName">
-              Nom
-            </label>
-            <input
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              id="lastName"
-              type="text"
-              placeholder="Nom"
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="email">
-              Email
-            </label>
-            <input
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              id="email"
-              type="email"
-              placeholder="Email"
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="phone">
-              Numéro de téléphone
-            </label>
-            <input
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              id="phone"
-              type="tel"
-              placeholder="Numéro de téléphone"
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="birthdate">
-              Date de naissance
-            </label>
-            <input
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              id="birthdate"
-              type="date"
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="residence">
-              Résidence
-            </label>
-            <select
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              id="residence"
-            >
-              <option value="">Sélectionnez un lieu</option>
-              <option value="antananarivo">Antananarivo</option>
-              <option value="toamasina">Toamasina</option>
-              <option value="fianarantsoa">Fianarantsoa</option>
-              <option value="mahajanga">Mahajanga</option>
-              <option value="toliara">Toliara</option>
-              <option value="antsiranana">Antsiranana</option>
-            </select>
-          </div>
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="password">
-              Mot de passe
-            </label>
-            <input
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              id="password"
-              type="password"
-              placeholder="********"
-            />
-          </div>
-          <div className="mb-6">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="confirmPassword">
-              Confirmer le mot de passe
-            </label>
-            <input
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline"
-              id="confirmPassword"
-              type="password"
-              placeholder="********"
-            />
-          </div>
+        <form onSubmit={e => e.preventDefault()}>
+          {renderField('firstName', 'Prénom')}
+          {renderField('lastName', 'Nom')}
+          {renderField('email', 'Email', 'email')}
+          {renderField('phone', 'Numéro de téléphone', 'tel')}
+          {renderField('birthdate', 'Date de naissance', 'date')}
+          {renderField('residence', 'Résidence', 'select', residenceOptions)}
+          {renderField('password', 'Mot de passe', 'password')}
+          {renderField('confirmPassword', 'Confirmer le mot de passe', 'password')}
+          
           <div className="flex items-center justify-between">
             <button
-              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-              type="button"
+              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline disabled:opacity-50"
+              type="submit"
               onClick={handleRegister}
+              disabled={isLoading}
             >
-              S'inscrire
+              {isLoading ? 'Inscription en cours...' : 'S\'inscrire'}
             </button>
-           
           </div>
         </form>
       </div>
