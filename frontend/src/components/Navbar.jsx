@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './Navbar.css';
 import logo from '/tth-removebg.png';
 import SearchBar from './SearchBar';
@@ -12,9 +12,18 @@ const Navbar = () => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef(null);
 
   useEffect(() => {
     fetchNotifications();
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const fetchNotifications = async () => {
@@ -84,44 +93,64 @@ const Navbar = () => {
     setIsMenuOpen(!isMenuOpen);
   };
 
+  const handleLinkClick = () => {
+    setIsMenuOpen(false);
+  };
+
   return (
     <nav className="navbar justify-center">
-      <div className="navbar-brand">
+      <div className="navbar-brand" ref={menuRef}>
         <img src={logo} alt="TotalTradeHub Logo" className="navbar-logo" />
         
-        {isMobile && (
-          <button className="menu-toggle" onClick={toggleMenu}>
-            {isMenuOpen ? <FaTimes size={25} /> : <FaBars size={25} />}
-          </button>
-        )}
+        <button 
+          className={`menu-toggle ${isMenuOpen ? 'active' : ''}`} 
+          onClick={toggleMenu}
+          aria-label="Toggle menu"
+        >
+          {isMenuOpen ? <FaTimes size={25} /> : <FaBars size={25} />}
+        </button>
 
         <ul className={`navbar-links ${isMobile ? 'mobile' : ''} ${isMenuOpen ? 'active' : ''}`}>
           <li>
-            <a href="/WelcomePage" className='bizina'>
-              {isMobile ? <FaBriefcase size={20} /> : "Bizness-Pro"}
+            <a href="/WelcomePage" className="bizina" onClick={handleLinkClick}>
+              {isMobile ? (
+                <>
+                  <FaBriefcase size={20} />
+                  <span>Bizness-Pro</span>
+                </>
+              ) : (
+                "Bizness-Pro"
+              )}
             </a>
           </li>
           <li>
-            <a href="/WelcomePage">
-              {isMobile ? <FaStore size={20} /> : "E-Jery"}
+            <a href="/WelcomePage" onClick={handleLinkClick}>
+              {isMobile ? (
+                <>
+                  <FaStore size={20} />
+                  <span>E-Jery</span>
+                </>
+              ) : (
+                "E-Jery"
+              )}
             </a>
           </li>
-          <li>
+          <li className="search-container">
             <SearchBar className="recherche" />
           </li>
           <li className="notification-container">
-            <button className="notification-button text-[20px]" onClick={handleNotificationClick}>
-              {isMobile ? (
-                <FaBell size={25} />
-              ) : (
-                <>
-                  <FaBell size={25} />
-                  {unreadCount > 0 && <span className="notification-badge">{unreadCount}</span>}
-                </>
-              )}
+            <button 
+              className="notification-button text-[20px]" 
+              onClick={(e) => {
+                e.stopPropagation();
+                handleNotificationClick();
+              }}
+            >
+              <FaBell size={25} />
+              {unreadCount > 0 && <span className="notification-badge">{unreadCount}</span>}
             </button>
             {showNotifications && (
-              <div className="notifications-dropdown">
+              <div className="notifications-dropdown" onClick={e => e.stopPropagation()}>
                 <div className="notifications-header">
                   <h3>Notifications</h3>
                 </div>
@@ -160,13 +189,27 @@ const Navbar = () => {
             )}
           </li>
           <li className="nav-item">
-            <a href="/profile">
-              {isMobile ? <FaUser size={20} /> : "Mon Profile"}
+            <a href="/profile" onClick={handleLinkClick}>
+              {isMobile ? (
+                <>
+                  <FaUser size={20} />
+                  <span>Mon Profile</span>
+                </>
+              ) : (
+                "Mon Profile"
+              )}
             </a>
           </li>
           <li className="nav-item">
-            <a href="/settings">
-              {isMobile ? <FaCog size={20} /> : "Settings"}
+            <a href="/settings" onClick={handleLinkClick}>
+              {isMobile ? (
+                <>
+                  <FaCog size={20} />
+                  <span>Settings</span>
+                </>
+              ) : (
+                "Settings"
+              )}
             </a>
           </li>
         </ul>
