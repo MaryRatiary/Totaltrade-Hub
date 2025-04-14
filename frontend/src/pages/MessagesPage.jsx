@@ -42,6 +42,34 @@ const MessagesPage = () => {
     };
   };
 
+  const getCurrentUser = () => {
+    try {
+      const userString = localStorage.getItem('currentUser');
+      if (!userString) {
+        console.error('No user found in localStorage');
+        return null;
+      }
+      const user = JSON.parse(userString);
+      if (!user) {
+        console.error('Invalid user data in localStorage');
+        return null;
+      }
+      // Handle both lowercase and uppercase ID field
+      const userId = user.id || user.Id;
+      if (!userId) {
+        console.error('Invalid user data in localStorage:', user);
+        return null;
+      }
+      return {
+        ...user,
+        id: userId // Normalize to lowercase for consistency
+      };
+    } catch (error) {
+      console.error('Error parsing user from localStorage:', error);
+      return null;
+    }
+  };
+
   const fetchFriendsAndConversations = async () => {
     try {
       setLoading(true);
@@ -77,11 +105,24 @@ const MessagesPage = () => {
     }
   };
 
+  const normalizeMessage = (message) => {
+    const normalized = {
+      id: (message.Id || message.id || '').toString(),
+      senderId: (message.SenderId || message.senderId || '').toString(),
+      receiverId: (message.ReceiverId || message.receiverId || '').toString(),
+      content: message.Content || message.content || '',
+      createdAt: message.CreatedAt || message.createdAt
+    };
+    console.log('Normalized message:', normalized);
+    return normalized;
+  };
+
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!message.trim() || !selectedConversation) return;
 
     try {
+      const currentUser = JSON.parse(localStorage.getItem('currentUser'));
       const response = await axios.post(
         `${API_BASE_URL}/message/send`,
         {
@@ -91,10 +132,26 @@ const MessagesPage = () => {
         getAuthHeaders()
       );
 
-      console.log('Message envoyé:', response.data);
-      setMessages(prevMessages => [...prevMessages, response.data]);
+      const normalizedMessage = normalizeMessage(response.data);
+      // Vérifier que l'ID de l'expéditeur est correctement défini
+      if (!normalizedMessage.senderId) {
+        normalizedMessage.senderId = currentUser.id;
+      }
+      setMessages(prevMessages => [...prevMessages, normalizedMessage]);
       setMessage('');
-      fetchFriendsAndConversations();
+      
+      // Mise à jour de la conversation sans re-fetch complet
+      const updatedConversation = {
+        ...selectedConversation,
+        lastMessage: message,
+        lastMessageTime: new Date().toISOString()
+      };
+      
+      setConversations(prevConversations => 
+        prevConversations.map(conv => 
+          conv.id === selectedConversation.id ? updatedConversation : conv
+        )
+      );
     } catch (error) {
       console.error('Error sending message:', error);
       setError('Erreur lors de l\'envoi du message');
@@ -262,17 +319,24 @@ const MessagesPage = () => {
               
               <div className="messages-container">
                 {messages && messages.length > 0 ? (
-                  messages.map((msg) => {
-                    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-                    const isSent = msg.senderId === currentUser?.id;
+                  messages.map((msg, index) => {
+                    const currentUser = getCurrentUser();
+                    if (!currentUser) {
+                      console.error('Unable to determine message direction: no current user');
+                      return null;
+                    }
+                    const normalizedMsg = normalizeMessage(msg);
+                    // Compare string versions of IDs to ensure consistent comparison
+                    const isSent = normalizedMsg.senderId.toString() === currentUser.id.toString();
+                    
                     return (
                       <div
-                        key={msg.id}
+                        key={`${normalizedMsg.id || 'msg'}-${index}`}
                         className={`message ${isSent ? 'sent' : 'received'}`}
                       >
-                        <div className="message-text">{msg.content}</div>
+                        <div className="message-text">{normalizedMsg.content}</div>
                         <div className="message-time">
-                          {formatTime(msg.createdAt)}
+                          {formatTime(normalizedMsg.createdAt)}
                         </div>
                       </div>
                     );
