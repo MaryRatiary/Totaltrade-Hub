@@ -37,8 +37,31 @@ namespace TTH.Backend.Controllers
                     return NotFound(new { message = "No users found" });
                 }
 
+                var response = users.Select(user => new
+                {
+                    Id = user.Id,
+                    FirstName = user.FirstName,
+                    LastName = user.LastName,
+                    Email = user.Email,
+                    Phone = user.Phone,
+                    Residence = user.Residence,
+                    ProfilePicture = !string.IsNullOrEmpty(user.ProfilePicture)
+                        ? $"http://localhost:5131{user.ProfilePicture}"
+                        : null,
+                    Articles = user.Articles?.Select(a => new
+                    {
+                        Id = a.Id,
+                        Title = a.Title,
+                        Description = a.Description,
+                        ImagePath = !string.IsNullOrEmpty(a.ImagePath)
+                            ? $"http://localhost:5131{a.ImagePath}"
+                            : null,
+                        CreatedAt = a.CreatedAt
+                    }).ToList()
+                });
+
                 _logger.LogInformation($"Found {users.Count} users");
-                return Ok(users);
+                return Ok(response);
             }
             catch (Exception ex)
             {
@@ -135,12 +158,12 @@ namespace TTH.Backend.Controllers
 
                 var response = new
                 {
-                    Id = user.Id,
+                    id = user.Id,
                     FirstName = user.FirstName,
                     LastName = user.LastName,
                     Email = user.Email,
-                    Phone = user.Phone,
-                    Residence = user.Residence,
+                    Phone = user.Phone ?? "",
+                    Residence = user.Residence ?? "",
                     ProfilePicture = !string.IsNullOrEmpty(user.ProfilePicture) 
                         ? $"http://localhost:5131{user.ProfilePicture}"
                         : null,

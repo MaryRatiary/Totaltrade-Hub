@@ -1,15 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 
 const UserProfile = () => {
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
-  const [isEditing, setIsEditing] = useState(false);
   const fileInputRef = useRef(null);
+  const { userId } = useParams();
   const API_BASE_URL = 'http://localhost:5131/api';
   const [showPhotoDropdown, setShowPhotoDropdown] = useState(false);
   const [previousPhotos, setPreviousPhotos] = useState([]);
+  const [isOwnProfile, setIsOwnProfile] = useState(false);
 
   const loadUserProfile = async () => {
     const currentUser = JSON.parse(localStorage.getItem('currentUser'));
@@ -19,18 +22,18 @@ const UserProfile = () => {
     }
 
     try {
-      console.log('Sending request with token:', currentUser.token);
+      setLoading(true);
+      const endpoint = userId ? `${API_BASE_URL}/users/${userId}` : `${API_BASE_URL}/users/profile`;
+      setIsOwnProfile(!userId);
       
-      const response = await fetch(`${API_BASE_URL}/users/profile`, {
-        method: 'GET',
+      console.log('Fetching profile from:', endpoint);
+      const response = await fetch(endpoint, {
         headers: {
           'Authorization': `Bearer ${currentUser.token}`,
           'Content-Type': 'application/json'
         }
       });
 
-      console.log('Response status:', response.status);
-      
       if (response.status === 401 || response.status === 403) {
         localStorage.removeItem('currentUser');
         navigate('/login');
@@ -38,21 +41,27 @@ const UserProfile = () => {
       }
 
       const data = await response.json();
-      console.log('Response data:', data);
+      console.log('Profile data:', data);
 
       if (!response.ok) {
         throw new Error(data.message || 'Error fetching profile');
       }
 
-      setUser(prev => ({
-        ...prev,
+      setUser({
         ...data,
-        token: currentUser.token
-      }));
-
+        FirstName: data.firstName || data.FirstName,
+        LastName: data.lastName || data.LastName,
+        Email: data.email || data.Email,
+        Phone: data.phone || data.Phone,
+        Residence: data.residence || data.Residence,
+        ProfilePicture: data.profilePicture || data.ProfilePicture,
+        Articles: data.articles || data.Articles || []
+      });
     } catch (error) {
       console.error('Error fetching profile:', error);
-      alert(error.message);
+      setError(error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -99,7 +108,7 @@ const UserProfile = () => {
         body: JSON.stringify({ photoUrl })
       });
       if (response.ok) {
-        setUser(prev => ({ ...prev, profilePicture: photoUrl }));
+        setUser(prev => ({ ...prev, ProfilePicture: photoUrl }));
       }
     } catch (error) {
       console.error('Error updating profile picture:', error);
@@ -108,7 +117,7 @@ const UserProfile = () => {
 
   useEffect(() => {
     loadUserProfile();
-  }, [navigate]);
+  }, [userId, navigate]);
 
   const handleLogout = () => {
     localStorage.removeItem('currentUser');
@@ -120,6 +129,8 @@ const UserProfile = () => {
   };
 
   const handleFileChange = async (event) => {
+    if (!isOwnProfile) return;
+    
     const file = event.target.files[0];
     if (file) {
       const formData = new FormData();
@@ -144,7 +155,7 @@ const UserProfile = () => {
         if (result.profilePictureUrl) {
           setUser(prev => ({
             ...prev,
-            profilePicture: result.profilePictureUrl
+            ProfilePicture: result.profilePictureUrl
           }));
           // Clear file input
           event.target.value = '';
@@ -156,10 +167,36 @@ const UserProfile = () => {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-100">
+        <Navbar />
+        <div className="container mx-auto px-4 py-8 mt-20">
+          <div className="text-center">
+            <p className="text-xl text-gray-600">Chargement du profil...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-100">
+        <Navbar />
+        <div className="container mx-auto px-4 py-8 mt-20">
+          <div className="text-center">
+            <p className="text-xl text-red-600">Erreur: {error}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-100">
       <Navbar />
-      <div className=" mt-10 container mx-auto px-4 py-8 max-w-4xl">
+      <div className="mt-10 container mx-auto px-4 py-8 max-w-4xl">
         {user ? (
           <>
             <div className="bg-white rounded-lg shadow-md p-8 mb-8">
@@ -172,28 +209,32 @@ const UserProfile = () => {
                     onClick={() => setShowPhotoDropdown(!showPhotoDropdown)}
                   >
                     <img
-                      src={user.profilePicture || '/default-avatar.png'}
-                      alt="Profile"
+                      src={user.ProfilePicture || '/default-avatar.png'} 
+                      alt={`${user.FirstName} ${user.LastName}`}
                       className="w-full h-full object-cover"
                     />
                   </div>
                   
                   {/* Photo Upload Button */}
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    className="hidden"
-                    onChange={handleFileChange}
-                    accept="image/*"
-                  />
-                  <button
-                    onClick={() => fileInputRef.current.click()}
-                    className="absolute bottom-0 right-0 bg-blue-500 text-white p-2 rounded-full hover:bg-blue-600"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-                    </svg>
-                  </button>
+                  {isOwnProfile && (
+                    <>
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        className="hidden"
+                        onChange={handleFileChange}
+                        accept="image/*"
+                      />
+                      <button
+                        onClick={() => fileInputRef.current.click()}
+                        className="absolute bottom-0 right-0 bg-blue-500 text-white p-2 rounded-full hover:bg-blue-600"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                      </button>
+                    </>
+                  )}
 
                   {/* Photos Dropdown */}
                   {showPhotoDropdown && (
@@ -242,21 +283,33 @@ const UserProfile = () => {
               <h2 className="text-xl font-semibold mb-4">
                 Publications ({user.Articles?.length || 0})
               </h2>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {user.Articles?.map(article => (
-                  <div key={article.id} className="aspect-square bg-gray-200 rounded-lg overflow-hidden">
+                  <div key={article.id} className="bg-white rounded-lg shadow-md overflow-hidden">
                     <img
                       src={article.imagePath || '/placeholder.jpg'}
                       alt={article.title}
-                      className="w-full h-full object-cover"
+                      className="w-full h-48 object-cover"
                     />
+                    <div className="p-4">
+                      <h3 className="font-semibold text-lg mb-2">{article.title}</h3>
+                      <p className="text-gray-600 text-sm mb-2">{article.description}</p>
+                      <div className="flex justify-between items-center">
+                        <span className="text-blue-600 font-semibold">
+                          {article.price ? `${new Intl.NumberFormat('fr-FR').format(article.price)} Ar` : 'Prix non spécifié'}
+                        </span>
+                        <span className="text-gray-500 text-sm">
+                          {new Date(article.createdAt).toLocaleDateString('fr-FR')}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
           </>
         ) : (
-          <div className="text-center py-8">Loading profile...</div>
+          <div className="text-center py-8">Chargement du profil...</div>
         )}
       </div>
     </div>
