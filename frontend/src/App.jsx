@@ -3,7 +3,6 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { ToastProvider } from './context/ToastContext';
 import NetworkStatus from './components/NetworkStatus';
 import QueueStatus from './components/QueueStatus';
-import PendingChanges from './components/PendingChanges';
 import WelcomePage from './pages/Welcome';
 import LoginPage from './pages/LoginPage';
 import Register from './pages/Register';
@@ -22,7 +21,6 @@ const App = () => {
       <Router>
         <NetworkStatus />
         <QueueStatus />
-        <PendingChanges />
         <Routes>
           <Route path="/WelcomePage" element={<WelcomePage />} />
           <Route path="/" element={<LoginPage />} />

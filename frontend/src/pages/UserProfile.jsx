@@ -7,6 +7,7 @@ const UserProfile = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [friendsCount, setFriendsCount] = useState(0);
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
   const { userId } = useParams();
@@ -58,8 +59,21 @@ const UserProfile = () => {
         ProfilePicture: data.profilePicture || data.ProfilePicture,
         Articles: data.articles || data.Articles || []
       });
+
+      // Fetch friends count
+      const friendsResponse = await fetch(`${API_BASE_URL}/friendrequest/friends`, {
+        headers: {
+          'Authorization': `Bearer ${currentUser.token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (friendsResponse.ok) {
+        const { count } = await friendsResponse.json();
+        setFriendsCount(count);
+      }
     } catch (error) {
-      console.error('Error fetching profile:', error);
+      console.error('Error:', error);
       setError(error.message);
     } finally {
       setLoading(false);
@@ -347,6 +361,7 @@ const UserProfile = () => {
                     <p className="text-gray-600">email: {user.Email}</p>
                     <p className="text-gray-500">contact: {user.Phone || 'No phone number'}</p>
                     <p className="text-gray-500">habite a {user.Residence || 'No address'}</p>
+                    <p className="text-gray-500">Amis: {friendsCount}</p>
                     
                     {/* Bouton d'ajout d'ami */}
                     {!isOwnProfile && (

@@ -88,13 +88,20 @@ namespace TTH.Backend.Controllers
                         (m.SenderId == userId && m.ReceiverId == otherUserId) ||
                         (m.SenderId == otherUserId && m.ReceiverId == userId))
                     .OrderBy(m => m.CreatedAt)
+                    .Select(m => new {
+                        id = m.Id,
+                        senderId = m.SenderId,
+                        receiverId = m.ReceiverId,
+                        content = m.Content,
+                        createdAt = m.CreatedAt.ToUniversalTime(),
+                        isRead = m.IsRead
+                    })
                     .ToList();
 
                 // Marquer les messages comme lus
-                foreach (var message in conversationMessages.Where(m => !m.IsRead && m.ReceiverId == userId))
+                foreach (var message in messages.Where(m => !m.IsRead && m.ReceiverId == userId))
                 {
                     message.IsRead = true;
-                    // Update in database
                     await _messageService.UpdateMessageAsync(message);
                 }
 

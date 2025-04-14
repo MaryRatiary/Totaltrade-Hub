@@ -37,6 +37,7 @@ builder.Services.AddScoped<ArticleService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<MessageService>();
 builder.Services.AddScoped<FriendRequestService>();
+builder.Services.AddSingleton<LoginAttemptTracker>();
 
 // Configure CORS
 builder.Services.AddCors(options =>

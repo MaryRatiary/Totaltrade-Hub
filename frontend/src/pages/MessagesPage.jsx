@@ -13,6 +13,9 @@ const MessagesPage = () => {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [friends, setFriends] = useState([]);
+  const [showNewMessageModal, setShowNewMessageModal] = useState(false);
 
   useEffect(() => {
     const currentUser = localStorage.getItem('currentUser');
@@ -20,7 +23,7 @@ const MessagesPage = () => {
       navigate('/login');
       return;
     }
-    fetchConversations();
+    fetchFriendsAndConversations();
   }, [navigate]);
 
   useEffect(() => {
@@ -39,15 +42,18 @@ const MessagesPage = () => {
     };
   };
 
-  const fetchConversations = async () => {
+  const fetchFriendsAndConversations = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_BASE_URL}/message/conversations`, getAuthHeaders());
-      setConversations(response.data);
+      const friendsResponse = await axios.get(`${API_BASE_URL}/friendrequest/friends`, getAuthHeaders());
+      setFriends(friendsResponse.data.friends);
+
+      const conversationsResponse = await axios.get(`${API_BASE_URL}/message/conversations`, getAuthHeaders());
+      setConversations(conversationsResponse.data);
       setError(null);
     } catch (error) {
-      console.error('Error fetching conversations:', error);
-      setError('Erreur lors du chargement des conversations');
+      console.error('Error fetching data:', error);
+      setError('Erreur lors du chargement des données');
     } finally {
       setLoading(false);
     }
@@ -60,6 +66,7 @@ const MessagesPage = () => {
         `${API_BASE_URL}/message/messages/${otherUserId}`,
         getAuthHeaders()
       );
+      console.log('Messages reçus:', response.data);
       setMessages(response.data);
       setError(null);
     } catch (error) {
@@ -84,66 +91,161 @@ const MessagesPage = () => {
         getAuthHeaders()
       );
 
-      setMessages([...messages, response.data]);
+      console.log('Message envoyé:', response.data);
+      setMessages(prevMessages => [...prevMessages, response.data]);
       setMessage('');
-      fetchConversations(); // Mettre à jour la liste des conversations pour afficher le dernier message
+      fetchFriendsAndConversations();
     } catch (error) {
       console.error('Error sending message:', error);
       setError('Erreur lors de l\'envoi du message');
     }
   };
 
-  if (loading && !conversations.length) {
-    return (
-      <>
-        <Navbar />
-        <div className="messages-page">
-          <div className="loading">Chargement...</div>
-        </div>
-      </>
-    );
-  }
+  const startNewConversation = (friend) => {
+    const existingConversation = conversations.find(conv => conv.id === friend.id);
+    if (existingConversation) {
+      setSelectedConversation(existingConversation);
+    } else {
+      setSelectedConversation({
+        id: friend.id,
+        firstName: friend.firstName,
+        lastName: friend.lastName,
+        profilePicture: friend.profilePicture,
+        lastMessage: null,
+        unreadCount: 0
+      });
+    }
+    setShowNewMessageModal(false);
+  };
 
-  if (error && !conversations.length) {
-    return (
-      <>
-        <Navbar />
-        <div className="messages-page">
-          <div className="error">{error}</div>
-        </div>
-      </>
-    );
-  }
+  const formatMessageDate = (dateString) => {
+    const messageDate = new Date(dateString);
+    const now = new Date();
+    
+    if (messageDate.toDateString() === now.toDateString()) {
+      return messageDate.toLocaleTimeString('fr-FR', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+    
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (messageDate.toDateString() === yesterday.toDateString()) {
+      return `Hier à ${messageDate.toLocaleTimeString('fr-FR', {
+        hour: '2-digit',
+        minute: '2-digit'
+      })}`;
+    }
+    
+    return messageDate.toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const formatTime = (dateString) => {
+    if (!dateString) return '';
+    
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        console.error('Invalid date:', dateString);
+        return '';
+      }
+      
+      const now = new Date();
+      const yesterday = new Date(now);
+      yesterday.setDate(yesterday.getDate() - 1);
+      
+      if (date.toLocaleDateString() === now.toLocaleDateString()) {
+        return date.toLocaleTimeString('fr-FR', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        });
+      }
+      
+      if (date.toLocaleDateString() === yesterday.toLocaleDateString()) {
+        return `Hier, ${date.toLocaleTimeString('fr-FR', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        })}`;
+      }
+      
+      return date.toLocaleString('fr-FR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      });
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return '';
+    }
+  };
+
+  const filteredConversations = conversations.filter(conv => 
+    (conv.firstName + ' ' + conv.lastName).toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const filteredFriends = friends.filter(friend =>
+    (friend.firstName + ' ' + friend.lastName).toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <>
       <Navbar />
       <div className="messages-page">
         <div className="conversations-list">
-          <h2>Conversations</h2>
-          {conversations.map(conv => (
-            <div
-              key={conv.id}
-              className={`conversation-item ${selectedConversation?.id === conv.id ? 'active' : ''}`}
-              onClick={() => setSelectedConversation(conv)}
+          <div className="conversations-header">
+            <h2>Discussions</h2>
+            <button 
+              onClick={() => setShowNewMessageModal(true)}
+              className="new-message-button"
             >
-              <img
-                src={conv.profilePicture || '/default-avatar.png'}
-                alt={`${conv.firstName} ${conv.lastName}`}
-                className="conversation-avatar"
-              />
-              <div className="conversation-info">
-                <h3>{conv.firstName} {conv.lastName}</h3>
-                <p className="last-message">
-                  {conv.lastMessage || 'Démarrer une conversation'}
-                  {conv.unreadCount > 0 && <span className="unread-count">{conv.unreadCount}</span>}
-                </p>
-                <span className="message-time">
-                  {new Date(conv.lastMessageTime).toLocaleTimeString()}
-                </span>
+              Nouveau message
+            </button>
+          </div>
+          
+          <div className="search-bar">
+            <input
+              type="text"
+              placeholder="Rechercher une conversation..."
+              className="search-input"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          
+          <div className="conversations-container">
+            {filteredConversations.map(conv => (
+              <div
+                key={conv.id}
+                className={`conversation-item ${selectedConversation?.id === conv.id ? 'active' : ''}`}
+                onClick={() => setSelectedConversation(conv)}
+              >
+                <img
+                  src={conv.profilePicture || '/default-avatar.png'}
+                  alt={`${conv.firstName} ${conv.lastName}`}
+                  className="conversation-avatar"
+                />
+                <div className="conversation-info">
+                  <h3>{conv.firstName} {conv.lastName}</h3>
+                  <p className="last-message">
+                    {conv.lastMessage || 'Démarrer une conversation'}
+                    {conv.unreadCount > 0 && <span className="unread-count">{conv.unreadCount}</span>}
+                  </p>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
         
         <div className="chat-area">
@@ -159,17 +261,27 @@ const MessagesPage = () => {
               </div>
               
               <div className="messages-container">
-                {messages.map(msg => (
-                  <div
-                    key={msg.id}
-                    className={`message ${msg.senderId === JSON.parse(localStorage.getItem('currentUser'))?.id ? 'sent' : 'received'}`}
-                  >
-                    <p>{msg.content}</p>
-                    <span className="message-time">
-                      {new Date(msg.createdAt).toLocaleTimeString()}
-                    </span>
+                {messages && messages.length > 0 ? (
+                  messages.map((msg) => {
+                    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+                    const isSent = msg.senderId === currentUser?.id;
+                    return (
+                      <div
+                        key={msg.id}
+                        className={`message ${isSent ? 'sent' : 'received'}`}
+                      >
+                        <div className="message-text">{msg.content}</div>
+                        <div className="message-time">
+                          {formatTime(msg.createdAt)}
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="flex items-center justify-center h-full text-gray-500">
+                    Commencez la conversation...
                   </div>
-                ))}
+                )}
               </div>
               
               <form onSubmit={handleSendMessage} className="message-input-form">
@@ -186,11 +298,52 @@ const MessagesPage = () => {
               </form>
             </>
           ) : (
-            <div className="no-conversation-selected">
-              <p>Sélectionnez une conversation pour commencer à discuter</p>
+            <div className="flex items-center justify-center h-full text-gray-500">
+              Sélectionnez une conversation pour commencer à discuter
             </div>
           )}
         </div>
+
+        {showNewMessageModal && (
+          <div className="new-message-modal">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h3>Nouveau message</h3>
+                <button onClick={() => setShowNewMessageModal(false)} className="close-button">
+                  &times;
+                </button>
+              </div>
+              <div className="modal-search">
+                <input
+                  type="text"
+                  placeholder="Rechercher un ami..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="search-input"
+                />
+              </div>
+              <div className="friends-list">
+                {filteredFriends.map(friend => (
+                  <div
+                    key={friend.id}
+                    className="friend-item"
+                    onClick={() => startNewConversation(friend)}
+                  >
+                    <img
+                      src={friend.profilePicture || '/default-avatar.png'}
+                      alt={`${friend.firstName} ${friend.lastName}`}
+                      className="friend-avatar"
+                    />
+                    <div className="friend-info">
+                      <h4>{friend.firstName} {friend.lastName}</h4>
+                      <p className="username">@{friend.username}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );
