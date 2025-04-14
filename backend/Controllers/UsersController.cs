@@ -22,7 +22,7 @@ namespace TTH.Backend.Controllers
             _webHostEnvironment = webHostEnvironment;
         }
 
-        [HttpGet]
+        [HttpGet("list")] // Changed from "all" to "list" to avoid conflict
         public async Task<IActionResult> GetAllUsers()
         {
             try
@@ -31,12 +31,19 @@ namespace TTH.Backend.Controllers
 
                 var users = await _userService.GetAllUsersAsync();
 
+                if (users == null || !users.Any())
+                {
+                    _logger.LogWarning("No users found in the database");
+                    return NotFound(new { message = "No users found" });
+                }
+
                 _logger.LogInformation($"Found {users.Count} users");
                 return Ok(users);
             }
             catch (Exception ex)
             {
                 _logger.LogError($"Error fetching users: {ex.Message}");
+                _logger.LogError($"Stack trace: {ex.StackTrace}");
                 return StatusCode(500, new { message = "Error fetching users", error = ex.Message });
             }
         }
@@ -65,7 +72,9 @@ namespace TTH.Backend.Controllers
                     lastName = user.LastName,
                     phone = user.Phone ?? "",
                     residence = user.Residence ?? "",
-                    profilePicture = user.ProfilePicture,
+                    profilePicture = !string.IsNullOrEmpty(user.ProfilePicture)
+                        ? $"http://localhost:5131{user.ProfilePicture}"
+                        : "/default-avatar.png", // Default profile picture if none exists
                     articles = user.Articles.Select(a => new
                     {
                         id = a.Id,

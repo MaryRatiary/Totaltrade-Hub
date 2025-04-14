@@ -5,6 +5,7 @@ import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
 import PublishForm from '../components/PublishForm';
 import ArticleCard from '../components/ArticleCard';
+import UserHorizontalScroll from '../components/UserHorizontalScroll';
 
 const WelcomePage = () => {
   const navigate = useNavigate(); // Add this line
@@ -17,9 +18,11 @@ const WelcomePage = () => {
   }, [navigate]);
 
   const [articles, setArticles] = useState([]);
+  const [users, setUsers] = useState([]);
 
   useEffect(() => {
     fetchArticles();
+    fetchUsers();
   }, []);
 
   const API_BASE_URL = 'http://localhost:5131/api';
@@ -48,6 +51,33 @@ const WelcomePage = () => {
       setArticles(data);
     } catch (error) {
       console.error('Error fetching articles:', error);
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/users`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log("Fetched users from API:", data); // Debug log
+      setUsers(data);
+    } catch (error) {
+      console.error('Error fetching users:', error);
     }
   };
 
@@ -182,6 +212,12 @@ const WelcomePage = () => {
       </div>
 
       <Sidebar />
+       {/* Horizontal Scrollable User List */}
+              <div className="mb-6">
+                <UserHorizontalScroll users={users} />
+                console.log("Users passed to UserHorizontalScroll:", users); // Debug log
+              </div>
+      
       
       <section className="articles">
         <h2>Publications récentes</h2>

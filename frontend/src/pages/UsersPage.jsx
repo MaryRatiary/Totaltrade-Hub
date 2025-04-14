@@ -10,9 +10,27 @@ const UsersPage = () => {
 
   useEffect(() => {
     // Fetch all users
-    axios.get("http://localhost:5131/api/User/all")
-      .then(response => setUsers(response.data))
-      .catch(error => console.error("Error fetching users:", error));
+    const fetchUsers = async () => {
+      try {
+        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+        if (!currentUser?.token) {
+          console.error("User not authenticated");
+          return;
+        }
+
+        const response = await axios.get("http://localhost:5131/api/Users/list", { // Updated route
+          headers: {
+            'Authorization': `Bearer ${currentUser.token}`,
+          },
+        });
+
+        setUsers(response.data);
+      } catch (error) {
+        console.error("Error fetching users:", error);
+      }
+    };
+
+    fetchUsers();
   }, []);
 
   const handleSendMessage = () => {
@@ -47,7 +65,7 @@ const UsersPage = () => {
         {users.map(user => (
           <Card key={user.Id} style={{ padding: "20px", textAlign: "center" }}>
             <img
-              src={user.profilePicture || "https://via.placeholder.com/150"}
+              src={user.profilePicture || "/default-avatar.png"} // Ensure fallback to default avatar
               alt={`${user.FirstName} ${user.LastName}`}
               style={{ width: "100px", height: "100px", borderRadius: "50%", marginBottom: "10px" }}
             />

@@ -8,7 +8,6 @@ import AccountCreation from './pages/AccountCreation';
 import Dashboard from './pages/Dashboard';
 import UserProfile from './pages/UserProfile';
 import Settings from './pages/Settings';
-import Actualite from './pages/actualite';
 import UsersPage from './pages/UsersPage';
 import Calendar from './pages/Calendar';
 
@@ -18,7 +17,6 @@ const App = () => {
       <Routes>
         <Route path="/WelcomePage" element={<WelcomePage />} />
         <Route path="/" element={<LoginPage />} />
-        <Route path="/actualite" element={<Actualite />} />
         <Route path="/register" element={<Register />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/face-recognition" element={<FaceRecognition />} />
