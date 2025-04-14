@@ -26,5 +26,15 @@ namespace TTH.Backend.Services
             await _messages.Find(m => m.SenderId == userId || m.ReceiverId == userId)
                          .SortByDescending(m => m.CreatedAt)
                          .ToListAsync();
+
+        public async Task<bool> UpdateMessageAsync(Message message)
+        {
+            var filter = Builders<Message>.Filter.Eq(m => m.Id, message.Id);
+            var update = Builders<Message>.Update
+                .Set(m => m.IsRead, message.IsRead);
+
+            var result = await _messages.UpdateOneAsync(filter, update);
+            return result.ModifiedCount > 0;
+        }
     }
 }

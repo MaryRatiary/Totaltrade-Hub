@@ -10,6 +10,7 @@ import UserProfile from './pages/UserProfile';
 import Settings from './pages/Settings';
 import UsersPage from './pages/UsersPage';
 import Calendar from './pages/Calendar';
+import MessagesPage from './pages/MessagesPage';
 
 const App = () => {
   return (
@@ -26,6 +27,7 @@ const App = () => {
         <Route path="/profile/:userId" element={<UserProfile />} />
         <Route path="/settings" element={<Settings/>} />
         <Route path="/calendar" element={<Calendar/>}/>
+        <Route path="/messages" element={<MessagesPage />} />
       </Routes>
     </Router>
   );
