@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom'; // Add this import
+import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../services/config';
 
 import Sidebar from '../components/Sidebar';
@@ -9,22 +9,24 @@ import ArticleCard from '../components/ArticleCard';
 import UserHorizontalScroll from '../components/UserHorizontalScroll';
 
 const WelcomePage = () => {
-  const navigate = useNavigate(); // Add this line
-  
-  useEffect(() => {
-    const currentUser = localStorage.getItem('currentUser');
-    if (!currentUser) {
-      navigate('/login');
-    }
-  }, [navigate]);
-
+  const navigate = useNavigate();
   const [articles, setArticles] = useState([]);
+  const [friendsArticles, setFriendsArticles] = useState([]);
+  const [allArticles, setAllArticles] = useState([]); // Nouvel état
   const [users, setUsers] = useState([]);
 
   useEffect(() => {
+    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    if (!currentUser || !currentUser.token) {
+      navigate('/login');
+      return;
+    }
+    
     fetchArticles();
+    fetchFriendsArticles();
+    fetchAllArticles(); // Nouvelle fonction
     fetchUsers();
-  }, []);
+  }, [navigate]);
 
   const fetchArticles = async () => {
     try {
@@ -46,24 +48,75 @@ const WelcomePage = () => {
       }
       
       const data = await response.json();
-      console.log('Articles fetched from server:', data); // Debug log
+      console.log('Articles fetched from server:', data);
       setArticles(data);
     } catch (error) {
       console.error('Error fetching articles:', error);
     }
   };
 
+  const fetchFriendsArticles = async () => {
+    try {
+      const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+      if (!currentUser || !currentUser.token) {
+        return;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/articles/friends`, {
+        headers: {
+          'Authorization': `Bearer ${currentUser.token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      setFriendsArticles(data);
+    } catch (error) {
+      console.error('Error fetching friends articles:', error);
+    }
+  };
+
+  const fetchAllArticles = async () => {
+    try {
+      const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+      if (!currentUser || !currentUser.token) {
+        navigate('/login');
+        return;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/articles/all`, {
+        headers: {
+          'Authorization': `Bearer ${currentUser.token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      const sortedArticles = data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      setAllArticles(sortedArticles);
+    } catch (error) {
+      console.error('Error fetching all articles:', error);
+    }
+  };
+
   const fetchUsers = async () => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        navigate('/login');
+      const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+      if (!currentUser || !currentUser.token) {
         return;
       }
 
       const response = await fetch(`${API_BASE_URL}/users`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${currentUser.token}`,
           'Content-Type': 'application/json',
         },
       });
@@ -73,7 +126,6 @@ const WelcomePage = () => {
       }
 
       const data = await response.json();
-      console.log("Fetched users from API:", data); // Debug log
       setUsers(data);
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -101,7 +153,7 @@ const WelcomePage = () => {
       }
 
       const result = await response.json();
-      console.log('Server response:', result); // Debug log
+      console.log('Server response:', result);
 
       if (result.article) {
         const newArticle = {
@@ -113,10 +165,12 @@ const WelcomePage = () => {
           location: result.article.location,
           contact: result.article.contact,
           imagePath: result.article.imagePath,
-          createdAt: result.article.createdAt
+          createdAt: result.article.createdAt,
+          userId: currentUser.id // Ajouter l'ID de l'utilisateur
         };
         
         setArticles(prevArticles => [newArticle, ...prevArticles]);
+        setAllArticles(prevArticles => [newArticle, ...prevArticles]);
         return true;
       }
       return false;
@@ -138,7 +192,7 @@ const WelcomePage = () => {
             return;
         }
 
-        console.log('Sending reset request...'); // Debug log
+        console.log('Sending reset request...');
 
         const response = await fetch(`${API_BASE_URL}/articles/reset`, {
             method: 'DELETE',
@@ -150,11 +204,12 @@ const WelcomePage = () => {
 
         if (!response.ok) {
             const errorData = await response.text();
-            console.error('Server error:', errorData); // Debug log
+            console.error('Server error:', errorData);
             throw new Error('Failed to reset articles');
         }
 
-        await fetchArticles(); // Refresh the articles list
+        await fetchArticles();
+        await fetchAllArticles();
         alert('Publications réinitialisées avec succès');
     } catch (error) {
         console.error('Error:', error);
@@ -183,6 +238,7 @@ const WelcomePage = () => {
 
       if (response.ok) {
         setArticles([]);
+        setAllArticles([]);
         alert('Toutes les publications ont été supprimées avec succès');
       } else {
         throw new Error('Erreur lors de la suppression');
@@ -194,45 +250,44 @@ const WelcomePage = () => {
   };
 
   return (
-    <div className="welcome-container">
-      <header>
-        <Navbar />
-      </header>
+    <div className="min-h-screen bg-gray-100">
+      <Navbar />
 
-      <PublishForm onPublish={handlePublish} />
-      
-      <div className="admin-controls">
-        <button 
-          onClick={deleteAllArticles}
-          className="delete-all-button bg-red-600 hover:bg-red-800 text-white font-bold py-2 px-4 rounded mb-4"
-        >
-          Supprimer toutes les publications
-        </button>
-      </div>
-
-      <Sidebar />
-       {/* Horizontal Scrollable User List */}
-              <div className="mb-6">
-                <UserHorizontalScroll users={users} />
-                console.log("Users passed to UserHorizontalScroll:", users); // Debug log
-              </div>
-      
-      
-      <section className="articles">
-        <h2>Publications récentes</h2>
-        <div className="articles-grid">
-          {articles && articles.length > 0 ? (
-            articles.map((article, index) => (
-              <ArticleCard 
-                key={`${article.id || ''}-${index}`} 
-                article={article} 
-              />
-            ))
-          ) : (
-            <p className="no-articles">Aucun article publié pour le moment</p>
-          )}
+      <div className="container mx-auto px-4 py-8">
+        <PublishForm onPublish={handlePublish} />
+        
+        <div className="mb-6">
+          <UserHorizontalScroll users={users} />
         </div>
-      </section>
+
+        <div className="admin-controls">
+          <button 
+            onClick={deleteAllArticles}
+            className="delete-all-button bg-red-600 hover:bg-red-800 text-white font-bold py-2 px-4 rounded mb-4"
+          >
+            Supprimer toutes les publications
+          </button>
+        </div>
+
+        <Sidebar />
+        
+        <section className="articles">
+          <h2 className="text-2xl font-bold mb-4">Fil d'actualité</h2>
+          <div className="articles-grid">
+            {allArticles && allArticles.length > 0 ? (
+              allArticles.map((article, index) => (
+                <ArticleCard 
+                  key={`${article.id || ''}-${index}`} 
+                  article={article}
+                  isFriendPost={article.userId !== JSON.parse(localStorage.getItem('currentUser'))?.id}
+                />
+              ))
+            ) : (
+              <p className="no-articles">Aucune publication disponible</p>
+            )}
+          </div>
+        </section>
+      </div>
     </div>
   );
 };

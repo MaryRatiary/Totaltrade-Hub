@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import './PublishForm.css';
 
 const PublishForm = ({ onPublish }) => {
@@ -6,6 +6,7 @@ const PublishForm = ({ onPublish }) => {
     title: '',
     content: '',
     image: null,
+    imagePreview: null,
     price: '',
     location: '',
     description: '',
@@ -13,14 +14,63 @@ const PublishForm = ({ onPublish }) => {
   });
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setNewArticle({ ...newArticle, [name]: value });
   };
 
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleImageDrop = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) {
+      setNewArticle((prev) => ({
+        ...prev,
+        image: file,
+        imagePreview: URL.createObjectURL(file),
+      }));
+    }
+  }, []);
+
   const handleImageChange = (e) => {
-    setNewArticle({ ...newArticle, image: e.target.files[0] });
+    const file = e.target.files[0];
+    if (file) {
+      setNewArticle((prev) => ({
+        ...prev,
+        image: file,
+        imagePreview: URL.createObjectURL(file),
+      }));
+    }
+  };
+
+  const removeImage = () => {
+    URL.revokeObjectURL(newArticle.imagePreview);
+    setNewArticle((prev) => ({
+      ...prev,
+      image: null,
+      imagePreview: null,
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -48,6 +98,7 @@ const PublishForm = ({ onPublish }) => {
           title: '',
           content: '',
           image: null,
+          imagePreview: null,
           price: '',
           location: '',
           description: '',
@@ -69,8 +120,8 @@ const PublishForm = ({ onPublish }) => {
   };
 
   return (
-    <section className="publish-section ">
-      <button onClick={toggleDropdown} className="dropdown-toggle !justify-end">
+    <section className="publish-section">
+      <button onClick={toggleDropdown} className="dropdown-toggle">
         {isDropdownOpen ? 'Abandonner' : 'Publier un article'}
       </button>
       {isDropdownOpen && (
@@ -80,14 +131,6 @@ const PublishForm = ({ onPublish }) => {
             name="title"
             placeholder="Titre de l'article"
             value={newArticle.title}
-            onChange={handleInputChange}
-            className="publish-input"
-            required
-          />
-          <textarea
-            name="content"
-            placeholder="Contenu de l'article"
-            value={newArticle.content}
             onChange={handleInputChange}
             className="publish-input"
             required
@@ -110,14 +153,6 @@ const PublishForm = ({ onPublish }) => {
             className="publish-input"
             required
           />
-          <textarea
-            name="description"
-            placeholder="Description"
-            value={newArticle.description || ''}
-            onChange={handleInputChange}
-            className="publish-input"
-            required
-          />
           <input
             type="text"
             name="contact"
@@ -127,12 +162,63 @@ const PublishForm = ({ onPublish }) => {
             className="publish-input"
             required
           />
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleImageChange}
+          <textarea
+            name="content"
+            placeholder="Contenu de l'article"
+            value={newArticle.content}
+            onChange={handleInputChange}
             className="publish-input"
+            required
           />
+          <textarea
+            name="description"
+            placeholder="Description"
+            value={newArticle.description || ''}
+            onChange={handleInputChange}
+            className="publish-input"
+            required
+          />
+
+          <div
+            className={`image-drop-zone ${isDragging ? 'drag-active' : ''}`}
+            onDrop={handleImageDrop}
+            onDragOver={handleDragOver}
+            onDragEnter={handleDragEnter}
+            onDragLeave={handleDragLeave}
+            onClick={() => document.querySelector('input[type="file"]').click()}
+          >
+            {newArticle.imagePreview ? (
+              <div className="image-preview-container">
+                <img
+                  src={newArticle.imagePreview}
+                  alt="Prévisualisation"
+                  className="image-preview"
+                />
+                <button
+                  type="button"
+                  className="remove-image"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeImage();
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="plus-icon">+</div>
+                <p>Glissez une image ici ou cliquez pour sélectionner</p>
+              </>
+            )}
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              style={{ display: 'none' }}
+            />
+          </div>
+
           <div className="!justify-end">
             <button
               type="submit"
