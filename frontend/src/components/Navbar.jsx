@@ -124,7 +124,7 @@ const Navbar = () => {
             </a>
           </li>
           <li>
-            <a href="/WelcomePage" onClick={handleLinkClick}>
+            <a href="/Welcome" onClick={handleLinkClick}>
               {isMobile ? (
                 <>
                   <FaStore size={20} />
