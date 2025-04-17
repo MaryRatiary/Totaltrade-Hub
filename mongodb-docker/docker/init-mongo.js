@@ -1,10 +1,26 @@
-db.auth('root', 'example')
+// Switch to admin database
+db = db.getSiblingDB('admin');
 
-db = db.getSiblingDB('tthdb');
-
+// Create root user first
 db.createUser({
     user: "root",
     pwd: "example",
+    roles: [
+        { role: "userAdminAnyDatabase", db: "admin" },
+        { role: "readWriteAnyDatabase", db: "admin" }
+    ]
+});
+
+// Authenticate as root
+db.auth("root", "example");
+
+// Switch to the application database
+db = db.getSiblingDB('tthdb');
+
+// Create application user
+db.createUser({
+    user: "tthapp",
+    pwd: "tthapppass",
     roles: [
         {
             role: "readWrite",

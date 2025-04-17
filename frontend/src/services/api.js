@@ -1,28 +1,40 @@
 import { API_BASE_URL, getAuthHeaders } from './config';
-import { ApiError, handleApiError } from './errorHandler';
-import { fetchWithRetry } from './fetchInterceptor';
-import { loadingState } from './loadingState';
 
 class ApiService {
-    async makeRequest(key, request) {
-        loadingState.setLoading(key, true);
-        try {
-            const result = await request();
-            return result;
-        } finally {
-            loadingState.setLoading(key, false);
-        }
-    }
-
     async login(credentials) {
-        return this.makeRequest('login', async () => {
-            const response = await fetchWithRetry(`${API_BASE_URL}/auth/login`, {
+        console.log('Tentative de connexion avec:', { email: credentials.email, hasPassword: !!credentials.password });
+        
+        try {
+            console.log('Envoi de la requête à:', `${API_BASE_URL}/auth/login`);
+            
+            const response = await fetch(`${API_BASE_URL}/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(credentials),
+                body: JSON.stringify(credentials)
             });
-            return this.handleResponse(response);
-        });
+
+            console.log('Réponse reçue:', {
+                status: response.status,
+                statusText: response.statusText,
+                headers: Object.fromEntries(response.headers.entries())
+            });
+
+            const data = await response.json();
+            console.log('Données reçues:', data);
+            
+            if (!response.ok) {
+                throw new Error(data.message || 'Erreur lors de la connexion');
+            }
+
+            return data;
+        } catch (error) {
+            console.error('Erreur détaillée:', {
+                name: error.name,
+                message: error.message,
+                stack: error.stack
+            });
+            throw error;
+        }
     }
 
     async register(userData) {

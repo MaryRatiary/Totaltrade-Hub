@@ -2,8 +2,6 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './Register.css';
 import { apiService } from '../services/api';
-import { useLoading } from '../hooks/useLoading';
-import { useFormValidation } from '../hooks/useFormValidation';
 import { useToast } from '../context/ToastContext';
 import LoadingOverlay from '../components/LoadingOverlay';
 

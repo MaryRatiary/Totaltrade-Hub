@@ -1,8 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { ToastProvider } from './context/ToastContext';
-import NetworkStatus from './components/NetworkStatus';
-import QueueStatus from './components/QueueStatus';
 import WelcomePage from './pages/WelcomePage';
 import LoginPage from './pages/LoginPage';
 import Register from './pages/Register';
@@ -20,8 +18,6 @@ const App = () => {
   return (
     <ToastProvider>
       <Router>
-        <NetworkStatus />
-        <QueueStatus />
         <Routes>
           <Route path="/WelcomePage" element={<WelcomePage />} />
           <Route path="/" element={<LoginPage />} />

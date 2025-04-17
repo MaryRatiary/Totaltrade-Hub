@@ -26,15 +26,9 @@ const LoginPage = () => {
       
       navigate('/WelcomePage');
     } catch (error) {
-      setError(error.message || 'Une erreur est survenue lors de la connexion');
+      console.error('Erreur de connexion:', error);
+      setError(error.message || 'Erreur de connexion');
       setShowError(true);
-      
-      // Auto-masquer l'erreur après 3 secondes sur mobile
-      if (window.innerWidth <= 768) {
-        setTimeout(() => {
-          setShowError(false);
-        }, 3000);
-      }
     } finally {
       setIsLoading(false);
     }
