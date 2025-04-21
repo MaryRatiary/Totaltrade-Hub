@@ -20,30 +20,48 @@ namespace TTH.Backend.Controllers
         }
 
         [HttpPut("profile")]
-        public async Task<IActionResult> UpdateProfile([FromBody] ProfileUpdateDto request)
+        [Authorize]
+        public async Task<IActionResult> UpdateProfile([FromBody] UserUpdateDto updateDto)
         {
-            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var user = await _userService.GetUserByIdAsync(userId);
+            try
+            {
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized(new { message = "User ID not found in token" });
+                }
 
-            if (user == null) return NotFound();
+                var user = await _userService.GetByIdAsync(userId);
+                if (user == null)
+                {
+                    return NotFound(new { message = "Utilisateur non trouvé" });
+                }
 
-            user.FirstName = request.FirstName ?? user.FirstName;
-            user.LastName = request.LastName ?? user.LastName;
-            user.Phone = request.Phone ?? user.Phone;
-            user.Residence = request.Residence ?? user.Residence;
-            user.ProfilePicture = request.ProfilePicture ?? user.ProfilePicture;
+                user.FirstName = updateDto.FirstName;
+                user.LastName = updateDto.LastName;
+                user.Phone = updateDto.Phone;
+                user.Residence = updateDto.Residence;
 
-            await _userService.UpdateUserAsync(user);
-            return Ok(new { message = "Profile updated successfully" });
+                await _userService.UpdateAsync(userId, user);
+                return Ok(new { message = "Profil mis à jour avec succès" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error updating profile: {ex}");
+                return StatusCode(500, new { message = "Une erreur est survenue lors de la mise à jour du profil" });
+            }
         }
 
         [HttpPut("security")]
         public async Task<IActionResult> UpdateSecurity([FromBody] SecurityUpdateDto request)
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var user = await _userService.GetUserByIdAsync(userId);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized(new { message = "User not authenticated" });
 
-            if (user == null) return NotFound();
+            var user = await _userService.GetByIdAsync(userId);
+            if (user == null) 
+                return NotFound(new { message = "User not found" });
 
             if (request.NewPassword != null)
             {
@@ -53,7 +71,7 @@ namespace TTH.Backend.Controllers
                 user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
             }
 
-            await _userService.UpdateUserAsync(user);
+            await _userService.UpdateAsync(userId, user);
             return Ok(new { message = "Security settings updated successfully" });
         }
 
@@ -61,16 +79,18 @@ namespace TTH.Backend.Controllers
         public async Task<IActionResult> UpdateNotifications([FromBody] NotificationSettingsDto request)
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var user = await _userService.GetUserByIdAsync(userId);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized(new { message = "User not authenticated" });
 
-            if (user == null) return NotFound();
+            var user = await _userService.GetByIdAsync(userId);
+            if (user == null) 
+                return NotFound(new { message = "User not found" });
 
-            // Vous devrez ajouter ces propriétés au modèle User
-            // user.PushNotifications = request.PushEnabled;
-            // user.EmailNotifications = request.EmailEnabled;
-            // user.NotificationSounds = request.SoundsEnabled;
+            user.PushNotificationsEnabled = request.PushEnabled;
+            user.EmailNotificationsEnabled = request.EmailEnabled;
+            user.NotificationSoundsEnabled = request.SoundsEnabled;
 
-            await _userService.UpdateUserAsync(user);
+            await _userService.UpdateAsync(userId, user);
             return Ok(new { message = "Notification settings updated" });
         }
 
@@ -78,16 +98,18 @@ namespace TTH.Backend.Controllers
         public async Task<IActionResult> UpdateAppearance([FromBody] AppearanceSettingsDto request)
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var user = await _userService.GetUserByIdAsync(userId);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized(new { message = "User not authenticated" });
 
-            if (user == null) return NotFound();
+            var user = await _userService.GetByIdAsync(userId);
+            if (user == null) 
+                return NotFound(new { message = "User not found" });
 
-            // Ajoutez ces propriétés au modèle User si nécessaire
-            // user.DarkMode = request.DarkMode;
-            // user.Theme = request.Theme;
-            // user.FontSize = request.FontSize;
+            user.DarkModeEnabled = request.DarkMode;
+            user.Theme = request.Theme;
+            user.FontSize = request.FontSize;
 
-            await _userService.UpdateUserAsync(user);
+            await _userService.UpdateAsync(userId, user);
             return Ok(new { message = "Appearance settings updated" });
         }
 
@@ -95,12 +117,18 @@ namespace TTH.Backend.Controllers
         public async Task<IActionResult> DeleteAccount()
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var user = await _userService.GetUserByIdAsync(userId);
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized(new { message = "User ID not found in token" });
+            }
 
-            if (user == null) return NotFound();
+            var user = await _userService.GetByIdAsync(userId);
+            if (user == null)
+            {
+                return NotFound(new { message = "User not found" });
+            }
 
             await _userService.DeleteUserAsync(userId);
-
             return Ok(new { message = "Account deleted successfully" });
         }
     }

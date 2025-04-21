@@ -13,12 +13,10 @@ export const isMobileDevice = () => {
     return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 };
 
-// Configuration des paramètres en fonction du type d'appareil
 export const getConfig = () => {
-    const isMobile = isMobileDevice();
     return {
-        retryAttempts: isMobile ? 10 : 5, // Plus de tentatives sur mobile
-        retryDelay: isMobile ? 3000 : 2000, // Délai plus long entre les tentatives sur mobile
+        retryAttempts: 3,
+        retryDelay: 2000,
     };
 };
 
@@ -27,7 +25,15 @@ export const getAuthHeaders = () => {
     return {
         'Content-Type': 'application/json',
         'Authorization': currentUser?.token ? `Bearer ${currentUser.token}` : '',
-        'X-Client-Type': isMobileDevice() ? 'mobile' : 'desktop',
-        'X-Network-Type': navigator?.connection?.effectiveType || 'unknown'
+        'Accept': 'application/json'
     };
+};
+
+export const handleApiError = (error) => {
+    if (error.status === 401) {
+        localStorage.removeItem('currentUser');
+        window.location.href = '/login';
+        return 'Session expirée. Veuillez vous reconnecter.';
+    }
+    return error.message || 'Une erreur est survenue';
 };

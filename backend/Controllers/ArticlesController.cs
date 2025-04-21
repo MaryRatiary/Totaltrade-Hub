@@ -84,7 +84,17 @@ namespace TTH.Backend.Controllers
             try
             {
                 var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return BadRequest(new { message = "User ID is required" });
+                }
+
                 var articles = await _articleService.GetArticlesByUserIdAsync(userId);
+                if (articles == null || !articles.Any())
+                {
+                    return NotFound(new { message = "No articles found for this user" });
+                }
+
                 var response = articles.Select(a => new
                 {
                     id = a.Id,
@@ -116,6 +126,44 @@ namespace TTH.Backend.Controllers
             }
         }
 
+        [HttpGet("user/{userId}")]
+        public async Task<ActionResult<List<Article>>> GetArticlesByUserId(string userId)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return BadRequest(new { message = "User ID is required" });
+                }
+
+                var articles = await _articleService.GetArticlesByUserIdAsync(userId);
+                if (articles == null || !articles.Any())
+                {
+                    return NotFound(new { message = "No articles found for this user" });
+                }
+
+                // Enhance articles with user info
+                var user = await _userService.GetByIdAsync(userId);
+                if (user != null)
+                {
+                    foreach (var article in articles)
+                    {
+                        article.AuthorUsername = user.Username;
+                        article.AuthorFirstName = user.FirstName;
+                        article.AuthorLastName = user.LastName;
+                        article.AuthorProfilePicture = user.ProfilePicture;
+                    }
+                }
+
+                return Ok(articles);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error getting articles by user ID: {ex}");
+                return StatusCode(500, new { message = "An error occurred while fetching articles" });
+            }
+        }
+
         [HttpPost]
         [Authorize]
         public async Task<IActionResult> CreateArticle([FromForm] ArticleDto articleDto)
@@ -123,6 +171,11 @@ namespace TTH.Backend.Controllers
             try
             {
                 var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return BadRequest(new { message = "User ID is required" });
+                }
+
                 var user = await _userService.GetUserByIdAsync(userId);
                 
                 if (user == null)
@@ -137,7 +190,11 @@ namespace TTH.Backend.Controllers
                     Description = articleDto.Description,
                     Contact = articleDto.Contact,
                     UserId = userId,
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = DateTime.UtcNow,
+                    AuthorFirstName = user.FirstName,
+                    AuthorLastName = user.LastName,
+                    AuthorUsername = user.Username,
+                    AuthorProfilePicture = user.ProfilePicture
                 };
 
                 if (articleDto.Image != null)
@@ -146,7 +203,35 @@ namespace TTH.Backend.Controllers
                 }
 
                 await _articleService.CreateAsync(article);
-                return Ok(new { message = "Article created successfully", article });
+                
+                // Return the full article with all necessary information
+                var response = new
+                {
+                    message = "Article created successfully",
+                    article = new
+                    {
+                        id = article.Id,
+                        title = article.Title,
+                        content = article.Content,
+                        price = article.Price,
+                        location = article.Location,
+                        description = article.Description,
+                        contact = article.Contact,
+                        imagePath = !string.IsNullOrEmpty(article.ImagePath) 
+                            ? $"http://localhost:5131{article.ImagePath}" 
+                            : null,
+                        createdAt = article.CreatedAt,
+                        userId = article.UserId,
+                        authorFirstName = article.AuthorFirstName,
+                        authorLastName = article.AuthorLastName,
+                        authorUsername = article.AuthorUsername,
+                        authorProfilePicture = !string.IsNullOrEmpty(article.AuthorProfilePicture)
+                            ? $"http://localhost:5131{article.AuthorProfilePicture}"
+                            : null
+                    }
+                };
+
+                return Ok(response);
             }
             catch (Exception ex)
             {
@@ -199,6 +284,11 @@ namespace TTH.Backend.Controllers
                 _logger.LogInformation($"Attempting to delete article with ID: {id}");
                 
                 var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return BadRequest(new { message = "User ID is required" });
+                }
+
                 var article = await _articleService.GetByIdAsync(id);
 
                 if (article == null)
@@ -276,6 +366,11 @@ namespace TTH.Backend.Controllers
             try
             {
                 var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return BadRequest(new { message = "User ID is required" });
+                }
+
                 var article = await _articleService.GetByIdAsync(id);
 
                 if (article == null)
@@ -309,6 +404,72 @@ namespace TTH.Backend.Controllers
             {
                 _logger.LogError($"Error updating article: {ex.Message}");
                 return StatusCode(500, new { message = "Error updating article" });
+            }
+        }
+
+        [HttpGet("friends")]
+        [Authorize]
+        public async Task<IActionResult> GetFriendsArticles()
+        {
+            try
+            {
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized(new { message = "User not authenticated" });
+                }
+
+                var user = await _userService.GetByIdAsync(userId);
+                if (user == null)
+                {
+                    return NotFound(new { message = "User not found" });
+                }
+
+                if (user.Friends == null || !user.Friends.Any())
+                {
+                    return Ok(new List<Article>());
+                }
+
+                var articles = new List<Article>();
+                foreach (var friendId in user.Friends)
+                {
+                    var friendArticles = await _articleService.GetArticlesByUserIdAsync(friendId);
+                    if (friendArticles != null)
+                    {
+                        articles.AddRange(friendArticles);
+                    }
+                }
+
+                // Trier les articles par date de création (plus récent en premier)
+                articles = articles.OrderByDescending(a => a.CreatedAt).ToList();
+
+                var response = articles.Select(a => new
+                {
+                    id = a.Id,
+                    title = a.Title,
+                    content = a.Content,
+                    price = a.Price,
+                    location = a.Location,
+                    description = a.Description,
+                    contact = a.Contact,
+                    imagePath = !string.IsNullOrEmpty(a.ImagePath) 
+                        ? $"http://localhost:5131{a.ImagePath}" 
+                        : null,
+                    authorFirstName = a.AuthorFirstName,
+                    authorLastName = a.AuthorLastName,
+                    authorUsername = a.AuthorUsername,
+                    authorProfilePicture = !string.IsNullOrEmpty(a.AuthorProfilePicture) 
+                        ? $"http://localhost:5131{a.AuthorProfilePicture}"
+                        : null,
+                    createdAt = a.CreatedAt
+                });
+
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error getting friends articles: {ex}");
+                return StatusCode(500, new { message = "An error occurred while fetching friends' articles" });
             }
         }
     }

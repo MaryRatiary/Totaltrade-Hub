@@ -24,7 +24,8 @@ namespace TTH.Backend.Models // Ensure this namespace matches the one imported i
         public bool IsRegistrationComplete { get; set; }
         public string? Password { get; set; } // Temporaire pour l'authentification
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-        
+        public FaceData? FaceData { get; set; }
+
         [BsonIgnore]
         public virtual ICollection<Article> Articles { get; set; } = new List<Article>();
 

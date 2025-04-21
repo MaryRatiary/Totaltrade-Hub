@@ -1,40 +1,65 @@
 import { API_BASE_URL, getAuthHeaders } from './config';
 
-class ApiService {
-    async login(credentials) {
-        console.log('Tentative de connexion avec:', { email: credentials.email, hasPassword: !!credentials.password });
-        
-        try {
-            console.log('Envoi de la requête à:', `${API_BASE_URL}/auth/login`);
-            
-            const response = await fetch(`${API_BASE_URL}/auth/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(credentials)
-            });
+class ApiError extends Error {
+    constructor(message, status) {
+        super(message);
+        this.status = status;
+        this.name = 'ApiError';
+    }
+}
 
-            console.log('Réponse reçue:', {
-                status: response.status,
-                statusText: response.statusText,
-                headers: Object.fromEntries(response.headers.entries())
+const fetchWithRetry = async (url, options, retries = 3, delay = 1000) => {
+    for (let i = 0; i < retries; i++) {
+        try {
+            const response = await fetch(url, options);
+            return response;
+        } catch (error) {
+            if (i === retries - 1) throw error;
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+    }
+};
+
+class ApiService {
+    async makeRequest(operationName, requestFn) {
+        try {
+            return await requestFn();
+        } catch (error) {
+            console.error(`Error in ${operationName}:`, error);
+            throw error instanceof ApiError ? error : new ApiError(error.message);
+        }
+    }
+
+    async login(credentials) {
+        return this.makeRequest('login', async () => {
+            if (!credentials.email || !credentials.password) {
+                throw new ApiError('Email et mot de passe requis');
+            }
+
+            const response = await fetchWithRetry(`${API_BASE_URL}/auth/login`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    email: credentials.email,
+                    password: credentials.password
+                })
             });
 
             const data = await response.json();
-            console.log('Données reçues:', data);
             
             if (!response.ok) {
-                throw new Error(data.message || 'Erreur lors de la connexion');
+                throw new ApiError(data.message || 'Erreur lors de la connexion', response.status);
+            }
+
+            if (!data.token) {
+                throw new ApiError('Token manquant dans la réponse');
             }
 
             return data;
-        } catch (error) {
-            console.error('Erreur détaillée:', {
-                name: error.name,
-                message: error.message,
-                stack: error.stack
-            });
-            throw error;
-        }
+        });
     }
 
     async register(userData) {

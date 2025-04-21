@@ -1,13 +1,14 @@
 using Microsoft.AspNetCore.Mvc;
 using TTH.Backend.Models;
 using TTH.Backend.Models.DTOs;
+using TTH.Backend.Models.DTOs.Auth;  // This is the namespace we want to use
 using TTH.Backend.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using TTH.Backend.Models.DTOs.Auth;
+using BC = BCrypt.Net.BCrypt;
 
 namespace TTH.Backend.Controllers
 {
@@ -30,12 +31,12 @@ namespace TTH.Backend.Controllers
         }
 
         [HttpPost("register")]
-        public async Task<ActionResult<User>> Register(UserDto request)
+        public async Task<ActionResult<User>> Register([FromBody] UserRegistrationDto request)
         {
             var user = await _userService.GetByEmailAsync(request.Email);
             if (user != null)
             {
-                return BadRequest("User already exists");
+                return BadRequest(new { message = "User already exists" });
             }
 
             try
@@ -51,7 +52,7 @@ namespace TTH.Backend.Controllers
                     Username = request.Username,
                     FirstName = request.FirstName,
                     LastName = request.LastName,
-                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
+                    PasswordHash = BC.HashPassword(request.Password),
                     Phone = request.Phone,
                     Residence = request.Residence,
                     Birthdate = request.Birthdate ?? DateTime.UtcNow,
@@ -61,18 +62,21 @@ namespace TTH.Backend.Controllers
 
                 await _userService.CreateAsync(newUser);
                 
+                var token = GenerateJwtToken(newUser);
+                
                 return Ok(new { 
                     message = "User registered successfully",
+                    token = token,
                     user = new {
-                        newUser.Id,
-                        newUser.Username,
-                        newUser.Email,
-                        newUser.FirstName,
-                        newUser.LastName,
-                        newUser.Phone,
-                        newUser.Residence,
-                        newUser.FaceImage,
-                        newUser.Birthdate
+                        id = newUser.Id,
+                        username = newUser.Username,
+                        email = newUser.Email,
+                        firstName = newUser.FirstName,
+                        lastName = newUser.LastName,
+                        phone = newUser.Phone,
+                        residence = newUser.Residence,
+                        faceImage = newUser.FaceImage,
+                        birthdate = newUser.Birthdate
                     }
                 });
             }
@@ -84,7 +88,7 @@ namespace TTH.Backend.Controllers
         }
 
         [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] Models.DTOs.Auth.UserLoginDto loginDto)
+        public async Task<IActionResult> Login([FromBody] UserLoginDto loginDto)
         {
             _logger.LogInformation($"Login attempt for email: {loginDto.Email}");
             
@@ -92,7 +96,7 @@ namespace TTH.Backend.Controllers
             {
                 if (string.IsNullOrEmpty(loginDto.Email) || string.IsNullOrEmpty(loginDto.Password))
                 {
-                    return BadRequest(new { message = "Email and password are required" });
+                    return BadRequest(new { message = "Email et mot de passe requis" });
                 }
 
                 var user = await _userService.GetByEmailAsync(loginDto.Email);
@@ -100,13 +104,13 @@ namespace TTH.Backend.Controllers
                 if (user == null)
                 {
                     _logger.LogWarning($"Login failed: User not found for email {loginDto.Email}");
-                    return Unauthorized(new { message = "Invalid email or password" });
+                    return Unauthorized(new { message = "Email ou mot de passe invalide" });
                 }
 
-                if (!BCrypt.Net.BCrypt.Verify(loginDto.Password, user.PasswordHash))
+                if (!BC.Verify(loginDto.Password, user.PasswordHash))
                 {
                     _logger.LogWarning($"Login failed: Invalid password for email {loginDto.Email}");
-                    return Unauthorized(new { message = "Invalid email or password" });
+                    return Unauthorized(new { message = "Email ou mot de passe invalide" });
                 }
 
                 var token = GenerateJwtToken(user);
@@ -115,26 +119,26 @@ namespace TTH.Backend.Controllers
 
                 return Ok(new
                 {
-                    message = "Login successful",
+                    message = "Connexion réussie",
                     token = token,
                     user = new
                     {
-                        user.Id,
-                        user.Username,
-                        user.Email,
-                        user.FirstName,
-                        user.LastName,
-                        user.Phone,
-                        user.Birthdate,
-                        user.Residence,
-                        user.FaceImage
+                        id = user.Id,
+                        username = user.Username,
+                        email = user.Email,
+                        firstName = user.FirstName,
+                        lastName = user.LastName,
+                        phone = user.Phone,
+                        birthdate = user.Birthdate,
+                        residence = user.Residence,
+                        profilePicture = user.ProfilePicture
                     }
                 });
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Login error: {ex.Message}");
-                return StatusCode(500, new { message = "An error occurred during login" });
+                _logger.LogError($"Login error: {ex}");
+                return StatusCode(500, new { message = "Une erreur est survenue lors de la connexion" });
             }
         }
 
@@ -144,11 +148,20 @@ namespace TTH.Backend.Controllers
             try
             {
                 var email = Request.Headers["User-Email"].ToString();
-                var user = await _userService.GetByEmailAsync(email);
+                if (string.IsNullOrEmpty(email))
+                {
+                    return BadRequest(new { message = "Email is required" });
+                }
 
+                var user = await _userService.GetByEmailAsync(email);
                 if (user == null)
                 {
                     return NotFound(new { message = "User not found" });
+                }
+
+                if (string.IsNullOrEmpty(user.Id))
+                {
+                    return StatusCode(500, new { message = "Invalid user ID" });
                 }
 
                 user.IsRegistrationComplete = true;

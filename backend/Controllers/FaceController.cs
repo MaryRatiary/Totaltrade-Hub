@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 using TTH.Backend.Services;
 using TTH.Backend.Models;
 using System.Text.Json;
@@ -19,58 +21,72 @@ namespace TTH.Backend.Controllers
         }
 
         [HttpPost("upload")]
-        public async Task<IActionResult> UploadFace([FromBody] FaceUploadDto dto)
+        [Authorize]
+        public async Task<IActionResult> UploadFaceData([FromBody] FaceDataDto faceData)
         {
             try
             {
-                var user = await _userService.GetUserByIdAsync(dto.UserId.ToString()); // Ensure userId is a string
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized(new { message = "Non autorisé" });
+
+                var user = await _userService.GetByIdAsync(userId);
 
                 if (user == null)
-                    return NotFound(new { message = "User not found" });
+                    return NotFound(new { message = "Utilisateur non trouvé" });
 
-                user.FaceImage = dto.Image;
-                await _userService.UpdateUserAsync(user);
-                
-                return Ok(new { message = "Face data uploaded successfully" });
+                user.FaceData = new FaceData
+                {
+                    Image = faceData.ImageData,
+                    Detections = faceData.Detections
+                };
+
+                await _userService.UpdateAsync(userId, user);
+
+                return Ok(new { message = "Données faciales enregistrées avec succès" });
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Error uploading face data: {ex.Message}");
-                return StatusCode(500, new { message = "Error uploading face data" });
+                _logger.LogError($"Error uploading face data: {ex}");
+                return StatusCode(500, new { message = "Une erreur est survenue lors de l'enregistrement des données faciales" });
             }
         }
 
-        [HttpPost("face-data")]
-        public async Task<IActionResult> SaveFaceData([FromBody] FaceDetectionDto dto)
+        [HttpPut("update")]
+        [Authorize]
+        public async Task<IActionResult> UpdateFaceData([FromBody] FaceDataDto faceData)
         {
             try
             {
-                var user = await _userService.GetUserByIdAsync(dto.UserId.ToString()); // Ensure userId is a string
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized(new { message = "Non autorisé" });
+
+                var user = await _userService.GetByIdAsync(userId);
+
                 if (user == null)
-                    return NotFound(new { message = "User not found" });
+                    return NotFound(new { message = "Utilisateur non trouvé" });
 
-                user.FaceImage = dto.ImageData;
-                await _userService.UpdateUserAsync(user);
+                user.FaceData = new FaceData
+                {
+                    Image = faceData.ImageData,
+                    Detections = faceData.Detections
+                };
 
-                return Ok(new { message = "Face data saved successfully" });
+                await _userService.UpdateAsync(userId, user);
+
+                return Ok(new { message = "Données faciales mises à jour avec succès" });
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Error saving face data: {ex.Message}");
-                return StatusCode(500, new { message = "Error saving face data" });
+                _logger.LogError($"Error updating face data: {ex}");
+                return StatusCode(500, new { message = "Une erreur est survenue lors de la mise à jour des données faciales" });
             }
         }
     }
 
-    public class FaceUploadDto
+    public class FaceDataDto
     {
-        public int UserId { get; set; }
-        public string Image { get; set; } = string.Empty;
-    }
-
-    public class FaceDetectionDto
-    {
-        public int UserId { get; set; }
         public string ImageData { get; set; } = string.Empty;
         public object[] Detections { get; set; } = Array.Empty<object>();
     }

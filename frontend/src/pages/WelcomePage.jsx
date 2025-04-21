@@ -114,7 +114,7 @@ const WelcomePage = () => {
         return;
       }
 
-      const response = await fetch(`${API_BASE_URL}/users`, {
+      const response = await fetch(`${API_BASE_URL}/users/list`, {
         headers: {
           'Authorization': `Bearer ${currentUser.token}`,
           'Content-Type': 'application/json',
@@ -166,7 +166,11 @@ const WelcomePage = () => {
           contact: result.article.contact,
           imagePath: result.article.imagePath,
           createdAt: result.article.createdAt,
-          userId: currentUser.id // Ajouter l'ID de l'utilisateur
+          userId: currentUser.id,
+          authorFirstName: result.article.authorFirstName,
+          authorLastName: result.article.authorLastName,
+          authorUsername: result.article.authorUsername,
+          authorProfilePicture: result.article.authorProfilePicture
         };
         
         setArticles(prevArticles => [newArticle, ...prevArticles]);

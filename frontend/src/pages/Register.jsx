@@ -4,10 +4,12 @@ import './Register.css';
 import { apiService } from '../services/api';
 import { useToast } from '../context/ToastContext';
 import LoadingOverlay from '../components/LoadingOverlay';
+import ErrorBoundary from '../components/ErrorBoundary';
+import useFormValidation from '../hooks/useFormValidation';
 
-const Register = () => {
+const RegisterContent = () => {
   const navigate = useNavigate();
-  const isLoading = useLoading('register');
+  const [isLoading, setIsLoading] = useState(false);
   const { showToast } = useToast();
   const [formData, setFormData] = useState({
     firstName: '',
@@ -160,6 +162,14 @@ const Register = () => {
         </form>
       </div>
     </div>
+  );
+};
+
+const Register = () => {
+  return (
+    <ErrorBoundary>
+      <RegisterContent />
+    </ErrorBoundary>
   );
 };
 

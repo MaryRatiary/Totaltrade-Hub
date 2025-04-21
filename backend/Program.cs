@@ -30,9 +30,17 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 // Configure MongoDB
-builder.Services.Configure<MongoDbSettings>(builder.Configuration.GetSection("MongoDb"));
-builder.Services.AddSingleton<IMongoClient>(sp => 
-    new MongoClient(builder.Configuration.GetValue<string>("MongoDb:ConnectionString")));
+var mongoSettings = builder.Configuration.GetSection("MongoDb").Get<MongoDbSettings>();
+var mongoClient = new MongoClient(new MongoClientSettings
+{
+    Server = new MongoServerAddress("localhost", 27017),
+    Credential = MongoCredential.CreateCredential("admin", "root", "example"),
+    ServerSelectionTimeout = TimeSpan.FromSeconds(5),
+    ConnectTimeout = TimeSpan.FromSeconds(5),
+    MaxConnectionPoolSize = 100,
+    RetryWrites = true
+});
+builder.Services.AddSingleton<IMongoClient>(mongoClient);
 builder.Services.AddScoped<ArticleService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<MessageService>();
@@ -44,11 +52,12 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", builder =>
     {
-        builder.SetIsOriginAllowed(_ => true)
+        builder
+            .WithOrigins("http://localhost:5173")
             .AllowAnyMethod()
             .AllowAnyHeader()
-            .WithExposedHeaders("Authorization")
-            .AllowCredentials();
+            .AllowCredentials()
+            .WithExposedHeaders("Token-Expired", "Authorization");
     });
 });
 
@@ -73,7 +82,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             {
                 if (context.Exception.GetType() == typeof(SecurityTokenExpiredException))
                 {
-                    context.Response.Headers.Add("Token-Expired", "true");
+                    context.Response.Headers.Append("Token-Expired", "true");
                 }
                 return Task.CompletedTask;
             }
@@ -82,6 +91,13 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 // Build the application
 var app = builder.Build();
+
+// Initialize MongoDB indexes
+using (var scope = app.Services.CreateScope())
+{
+    var userService = scope.ServiceProvider.GetRequiredService<UserService>();
+    await userService.InitializeIndexesAsync();
+}
 
 // Ensure wwwroot/uploads directory exists
 var uploadsPath = Path.Combine(app.Environment.WebRootPath, "uploads");
@@ -93,7 +109,12 @@ if (!Directory.Exists(uploadsPath))
 // Configure Kestrel for all network interfaces
 app.Urls.Clear();
 app.Urls.Add("http://0.0.0.0:5131");
-app.Urls.Add("https://0.0.0.0:5132");  // Add HTTPS endpoint
+
+// Only use HTTPS in production
+if (!app.Environment.IsDevelopment())
+{
+    app.Urls.Add("https://0.0.0.0:5132");
+}
 
 // Configure middleware pipeline
 if (app.Environment.IsDevelopment())

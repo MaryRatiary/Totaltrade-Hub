@@ -120,19 +120,35 @@ namespace TTH.Backend.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateUser(string id, [FromBody] UserUpdateDto userUpdate)
+        public async Task<IActionResult> UpdateUser(string id, [FromBody] UserDto userDto)
         {
-            var user = await _userService.GetUserByIdAsync(id);
-            if (user == null)
-                return NotFound();
+            if (string.IsNullOrEmpty(id))
+            {
+                return BadRequest(new { message = "User ID is required" });
+            }
 
-            user.FirstName = userUpdate.FirstName;
-            user.LastName = userUpdate.LastName;
-            user.Phone = userUpdate.Phone;
-            user.Residence = userUpdate.Residence;
+            try
+            {
+                var user = await _userService.GetByIdAsync(id);
+                if (user == null)
+                    return NotFound(new { message = "Utilisateur non trouvé" });
 
-            await _userService.UpdateUserAsync(user);
-            return Ok(user);
+                // Mettre à jour les propriétés
+                user.Username = userDto.Username;
+                user.FirstName = userDto.FirstName;
+                user.LastName = userDto.LastName;
+                user.Phone = userDto.Phone;
+                user.Residence = userDto.Residence;
+                user.Birthdate = userDto.Birthdate ?? user.Birthdate;
+
+                await _userService.UpdateAsync(id, user);
+                return Ok(new { message = "Utilisateur mis à jour avec succès" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error updating user: {ex}");
+                return StatusCode(500, new { message = "Une erreur est survenue lors de la mise à jour" });
+            }
         }
 
         [HttpGet("profile")]
@@ -206,9 +222,15 @@ namespace TTH.Backend.Controllers
                 }
 
                 var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                {
+                    _logger.LogWarning("User ID not found in token");
+                    return Unauthorized(new { message = "User ID not found in token" });
+                }
+                
                 _logger.LogInformation($"User ID from token: {userId}");
                 
-                var user = await _userService.GetUserByIdAsync(userId);
+                var user = await _userService.GetByIdAsync(userId);
                 _logger.LogInformation($"Found user: {user?.Id}, Current profile picture: {user?.ProfilePicture}");
 
                 if (user == null)
@@ -240,7 +262,7 @@ namespace TTH.Backend.Controllers
 
                 // Mettre à jour le profil
                 user.ProfilePicture = relativePath;
-                await _userService.UpdateUserAsync(user);
+                await _userService.UpdateAsync(userId, user);
                 
                 try
                 {
@@ -253,7 +275,7 @@ namespace TTH.Backend.Controllers
                 }
 
                 // Vérifier la mise à jour
-                var updatedUser = await _userService.GetUserByIdAsync(userId);
+                var updatedUser = await _userService.GetByIdAsync(userId);
                 _logger.LogInformation($"Verification - Updated profile picture: {updatedUser?.ProfilePicture}");
 
                 // Supprimer l'ancienne photo
@@ -300,5 +322,15 @@ namespace TTH.Backend.Controllers
         public string LastName { get; set; } = string.Empty;
         public string? Phone { get; set; }
         public string? Residence { get; set; }
+    }
+
+    public class UserDto
+    {
+        public string Username { get; set; } = string.Empty;
+        public string FirstName { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
+        public string? Phone { get; set; }
+        public string? Residence { get; set; }
+        public DateTime? Birthdate { get; set; }
     }
 }

@@ -65,31 +65,19 @@ namespace TTH.Backend.Services
             }
         }
 
-        public async Task<Article> GetByIdAsync(string id)
+        public async Task<Article?> GetByIdAsync(string id)
         {
-            try
+            if (string.IsNullOrEmpty(id))
+                return null;
+                
+            try 
             {
-                _logger.LogInformation($"Fetching article with ID: {id}");
-                var article = await _articles.Find(a => a.Id == id).FirstOrDefaultAsync();
-
-                if (article != null)
-                {
-                    var user = await _users.Find(u => u.Id == article.UserId).FirstOrDefaultAsync();
-                    if (user != null)
-                    {
-                        article.AuthorFirstName = user.FirstName;
-                        article.AuthorLastName = user.LastName;
-                        article.AuthorUsername = user.Username;
-                        article.AuthorProfilePicture = user.ProfilePicture;
-                    }
-                }
-
-                return article;
+                return await _articles.Find(x => x.Id == id).FirstOrDefaultAsync();
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Error fetching article by ID: {ex.Message}");
-                throw;
+                _logger.LogError($"Error getting article by ID: {ex}");
+                return null;
             }
         }
 
