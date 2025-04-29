@@ -44,14 +44,16 @@ const WelcomePage = () => {
       });
       
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
       }
       
       const data = await response.json();
       console.log('Articles fetched from server:', data);
-      setArticles(data);
+      setArticles(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching articles:', error);
+      setArticles([]);
     }
   };
 

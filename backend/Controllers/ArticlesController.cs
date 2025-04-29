@@ -39,6 +39,20 @@ namespace TTH.Backend.Controllers
                 var response = articles.Select(a => {
                     _logger.LogInformation($"Processing article ID: {a.Id}");
                     _logger.LogInformation($"Article data: Title={a.Title}, Author={a.AuthorFirstName} {a.AuthorLastName}");
+                    
+                    // Ensure user data is included
+                    if (string.IsNullOrEmpty(a.AuthorFirstName) || string.IsNullOrEmpty(a.AuthorLastName))
+                    {
+                        var user = _userService.GetByIdAsync(a.UserId).Result;
+                        if (user != null)
+                        {
+                            a.AuthorFirstName = user.FirstName;
+                            a.AuthorLastName = user.LastName;
+                            a.AuthorUsername = user.Username;
+                            a.AuthorProfilePicture = user.ProfilePicture;
+                        }
+                    }
+                    
                     return new
                     {
                         id = a.Id,
@@ -92,7 +106,7 @@ namespace TTH.Backend.Controllers
                 var articles = await _articleService.GetArticlesByUserIdAsync(userId);
                 if (articles == null || !articles.Any())
                 {
-                    return NotFound(new { message = "No articles found for this user" });
+                    return Ok(new List<object>()); // Return empty array instead of 404
                 }
 
                 var response = articles.Select(a => new

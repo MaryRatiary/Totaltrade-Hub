@@ -72,7 +72,19 @@ namespace TTH.Backend.Services
                 
             try 
             {
-                return await _articles.Find(x => x.Id == id).FirstOrDefaultAsync();
+                var article = await _articles.Find(x => x.Id == id).FirstOrDefaultAsync();
+                if (article != null)
+                {
+                    var user = await _users.Find(u => u.Id == article.UserId).FirstOrDefaultAsync();
+                    if (user != null)
+                    {
+                        article.AuthorFirstName = user.FirstName;
+                        article.AuthorLastName = user.LastName;
+                        article.AuthorUsername = user.Username;
+                        article.AuthorProfilePicture = user.ProfilePicture;
+                    }
+                }
+                return article;
             }
             catch (Exception ex)
             {
@@ -99,6 +111,17 @@ namespace TTH.Backend.Services
             try
             {
                 _logger.LogInformation($"Updating article with ID: {id}");
+                
+                // Récupérer les informations de l'utilisateur
+                var user = await _users.Find(u => u.Id == article.UserId).FirstOrDefaultAsync();
+                if (user != null)
+                {
+                    article.AuthorFirstName = user.FirstName;
+                    article.AuthorLastName = user.LastName;
+                    article.AuthorUsername = user.Username;
+                    article.AuthorProfilePicture = user.ProfilePicture;
+                }
+                
                 await _articles.ReplaceOneAsync(a => a.Id == id, article);
                 _logger.LogInformation($"Article with ID {id} updated successfully");
             }

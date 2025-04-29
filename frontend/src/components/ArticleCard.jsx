@@ -13,7 +13,7 @@ const ArticleCard = ({ article, onDelete, onEdit }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef(null);
 
-  // Add data validation with defaults
+  // Stockage des données de l'article avec des valeurs par défaut sécurisées
   const articleData = {
     id: article?.id ?? '',
     title: article?.title ?? 'Sans titre',
