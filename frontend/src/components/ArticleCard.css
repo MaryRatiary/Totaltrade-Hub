@@ -251,7 +251,7 @@
 
 @media (max-width: 768px) {
   .article-card {
-    width: 80%; /* Retour à 80% sur mobile */
+    width: 100%; /* Retour à 80% sur mobile */
     max-width: none; /* Suppression de la largeur maximale sur mobile */
   }
 }

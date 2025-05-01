@@ -20,7 +20,9 @@
 .login-form h2 {
   margin-bottom: 1.5rem;
   text-align: center;
-  color: #333;
+  color: #020202;
+  font-size:35px;
+  
 }
 
 .login-form input {

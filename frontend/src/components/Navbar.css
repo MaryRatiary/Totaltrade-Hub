@@ -106,7 +106,7 @@
 @media (max-width: 768px) {
   .navbar {
     padding: 0 1rem;
-    height: 60px;
+    height: 70px;
     margin-top: 0;
     border-radius: 0;
     justify-content: space-between;
@@ -115,7 +115,7 @@
     background-position: center;
     background-repeat: no-repeat;
     background-color: #0d274c;
-    position: relative;
+    position: fixed;
   }
 
   .navbar::before {

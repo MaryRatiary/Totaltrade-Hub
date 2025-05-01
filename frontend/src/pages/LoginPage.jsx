@@ -35,7 +35,7 @@ const LoginPage = () => {
   };
 
   return (
-    <div className='aito relative'>
+    <div className='aito relative ' >
       <img src={logo} alt="TotalTradeHub Logo" className='relative w-50 h-50'/>
       <article>
         <Link
@@ -48,7 +48,7 @@ const LoginPage = () => {
  
       <div className="login-container absolute w-full">
         <form onSubmit={handleSubmit} className="login-form">
-          <h2>Connexion</h2>
+          <h2 className='bolde font-size-[40px]'>Connexion</h2>
           {showError && error && (
             <div className="error-message" onClick={() => setShowError(false)}>
               {error}
