@@ -2,12 +2,13 @@
   max-width: 1200px;
   margin: 120px auto 40px; /* Augmenté pour laisser de l'espace pour la navbar */
   padding: 20px;
+  background-color: #1C1C2B;
 }
 
 .settings-title {
   font-size: 2rem;
   margin-bottom: 2rem;
-  color: #fff;
+  color: #F7E7CE;
 }
 
 .settings-grid {
@@ -17,7 +18,7 @@
 }
 
 .settings-section {
-  background: #1f2937;
+  background: #6A1B4D;
   border-radius: 12px;
   padding: 1.5rem;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -28,12 +29,12 @@
   align-items: center;
   gap: 1rem;
   margin-bottom: 1.5rem;
-  color: #fff;
+  color: #F7E7CE;
 }
 
 .section-header svg {
   font-size: 1.5rem;
-  color: #f69c02;
+  color: #B76E79;
 }
 
 .setting-item {
@@ -44,14 +45,14 @@
 }
 
 .setting-item:hover {
-  background: #374151;
+  background: #1C1C2B;
 }
 
 .setting-toggle, .setting-select {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  color: #fff;
+  color: #F7E7CE;
 }
 
 .toggle-switch {
@@ -74,7 +75,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: #4B5563;
+  background-color: #1C1C2B;
   transition: .4s;
   border-radius: 34px;
 }
@@ -86,13 +87,13 @@
   width: 20px;
   left: 2px;
   bottom: 2px;
-  background-color: white;
+  background-color: #F7E7CE;
   transition: .4s;
   border-radius: 50%;
 }
 
 input:checked + .toggle-slider {
-  background-color: #f69c02;
+  background-color: #B76E79;
 }
 
 input:checked + .toggle-slider:before {
@@ -100,30 +101,30 @@ input:checked + .toggle-slider:before {
 }
 
 .setting-select select {
-  background: #374151;
-  color: #fff;
+  background: #1C1C2B;
+  color: #F7E7CE;
   padding: 0.5rem;
   border-radius: 6px;
-  border: 1px solid #4B5563;
+  border: 1px solid #B76E79;
 }
 
 .setting-button {
   width: 100%;
   padding: 0.75rem;
   border-radius: 6px;
-  background: #f69c02;
-  color: #fff;
+  background: #B76E79;
+  color: #F7E7CE;
   border: none;
   cursor: pointer;
   transition: background-color 0.3s;
 }
 
 .setting-button:hover {
-  background: #d48802;
+  background: #6A1B4D;
 }
 
 .setting-button.danger {
-  background: #DC2626;
+  background: #6A1B4D;
   margin-top: 1rem;
   font-weight: bold;
   display: flex;
@@ -133,18 +134,18 @@ input:checked + .toggle-slider:before {
 }
 
 .setting-button.danger:hover {
-  background: #B91C1C;
+  background: #E97451;
 }
 
 .setting-link {
-  color: #fff;
+  color: #F7E7CE;
   text-decoration: none;
   display: block;
   padding: 0.5rem 0;
 }
 
 .setting-link:hover {
-  color: #f69c02;
+  color: #B76E79;
 }
 
 @media (max-width: 768px) {

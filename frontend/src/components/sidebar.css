@@ -1,6 +1,6 @@
 .sidebar {
   width: 200px;
-  background-color: #1f2937;
+  background-color: #1C1C2B;
   padding: 10px;
   color: rgb(255, 255, 255);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
@@ -36,9 +36,8 @@
 }
 
 .sidebar ul li a:hover {
-  color: #e46c1c;
+  color: #E1AD01;
   text-decoration: none;
-
 }
 
 

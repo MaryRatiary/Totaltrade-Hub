@@ -400,7 +400,7 @@ const MessagesPage = () => {
                     />
                     <div className="friend-info">
                       <h4>{friend.firstName} {friend.lastName}</h4>
-                      <p className="username">@{friend.username}</p>
+                      <p className="username">{friend.username}</p>
                     </div>
                   </div>
                 ))}
