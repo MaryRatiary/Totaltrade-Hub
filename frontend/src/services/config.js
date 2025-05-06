@@ -1,9 +1,10 @@
 // Récupérer l'IP du serveur en fonction de l'environnement
 const getApiBaseUrl = () => {
+    // En développement, utiliser l'IP du serveur pour permettre l'accès externe
     if (process.env.NODE_ENV === 'development') {
-        return 'http://localhost:5131/api';
+        return 'http://192.168.88.101:5131/api';
     }
-    return process.env.VITE_API_URL || 'http://localhost:5131/api';
+    return process.env.VITE_API_URL || 'http://192.168.88.101:5131/api';
 };
 
 export const API_BASE_URL = getApiBaseUrl();
@@ -30,10 +31,9 @@ export const getAuthHeaders = () => {
 };
 
 export const handleApiError = (error) => {
-    if (error.status === 401) {
-        localStorage.removeItem('currentUser');
-        window.location.href = '/login';
-        return 'Session expirée. Veuillez vous reconnecter.';
-    }
-    return error.message || 'Une erreur est survenue';
+    console.error('API Error:', error);
+    return {
+        message: error.message || 'Une erreur est survenue',
+        status: error.status || 500
+    };
 };

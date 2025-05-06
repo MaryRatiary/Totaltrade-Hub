@@ -3,6 +3,7 @@ using MongoDB.Driver;
 using MongoDB.Driver.Linq;
 using TTH.Backend.Data;
 using TTH.Backend.Models;
+using Microsoft.Extensions.Configuration;
 
 namespace TTH.Backend.Services
 {
@@ -11,16 +12,24 @@ namespace TTH.Backend.Services
         private readonly IMongoCollection<Article> _articles;
         private readonly IMongoCollection<User> _users;
         private readonly ILogger<ArticleService> _logger;
+        private readonly string _baseUrl;
 
         public ArticleService(
-            IOptions<MongoDbSettings> settings,
             IMongoClient mongoClient,
+            IConfiguration config,
             ILogger<ArticleService> logger)
         {
-            var database = mongoClient.GetDatabase(settings.Value.DatabaseName);
-            _articles = database.GetCollection<Article>(settings.Value.ArticlesCollectionName);
-            _users = database.GetCollection<User>(settings.Value.UsersCollectionName);
+            var database = mongoClient.GetDatabase(config.GetSection("MongoDb:DatabaseName").Value);
+            _articles = database.GetCollection<Article>("Articles");
+            _users = database.GetCollection<User>("Users");
             _logger = logger;
+            _baseUrl = "http://192.168.88.101:5131"; // URL du serveur
+        }
+
+        private string GetFullImageUrl(string? relativePath)
+        {
+            if (string.IsNullOrEmpty(relativePath)) return "";
+            return $"{_baseUrl}{relativePath}";
         }
 
         public async Task<List<Article>> GetAllAsync()
@@ -33,15 +42,6 @@ namespace TTH.Backend.Services
                     .SortByDescending(a => a.CreatedAt)
                     .ToListAsync();
                 
-                _logger.LogInformation($"Found {articles.Count} articles in database");
-
-                foreach (var article in articles)
-                {
-                    _logger.LogInformation($"Processing article {article.Id}");
-                    var user = await _users.Find(u => u.Id == article.UserId).FirstOrDefaultAsync();
-                    
-                    if (user != null)
-                    {
                         _logger.LogInformation($"Found author: {user.FirstName} {user.LastName}");
                         article.AuthorFirstName = user.FirstName;
                         article.AuthorLastName = user.LastName;

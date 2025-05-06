@@ -55,7 +55,8 @@ builder.Services.AddCors(options =>
         builder
             .WithOrigins(
                 "http://localhost:5173",
-                "http://192.168.1.181:5173"
+                "http://192.168.1.181:5173",
+                "http://192.168.88.101:5173"  // Ajout de la nouvelle adresse IP
             )
             .AllowAnyMethod()
             .AllowAnyHeader()
@@ -130,7 +131,17 @@ if (app.Environment.IsDevelopment())
 app.UseStaticFiles(new StaticFileOptions
 {
     ServeUnknownFileTypes = true,
-    DefaultContentType = "application/octet-stream"
+    DefaultContentType = "application/octet-stream",
+    OnPrepareResponse = ctx =>
+    {
+        // Ajouter les en-têtes CORS pour les fichiers statiques
+        ctx.Context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
+        ctx.Context.Response.Headers.Append("Access-Control-Allow-Headers", "*");
+        ctx.Context.Response.Headers.Append("Access-Control-Allow-Methods", "*");
+        
+        // Définir le cache-control pour améliorer les performances
+        ctx.Context.Response.Headers.Append("Cache-Control", "public,max-age=31536000");
+    }
 });
 
 app.UseRouting();
